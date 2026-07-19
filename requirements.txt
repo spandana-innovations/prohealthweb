@@ -1,0 +1,4 @@
+# Build-time dependency for the static site generator (build.py).
+# Pillow is used by src/gen2_base.py to read image dimensions for width/height
+# attributes and preloads. It is the only non-stdlib dependency.
+Pillow>=10,<12
