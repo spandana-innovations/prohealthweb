@@ -293,6 +293,7 @@ const I = {
   list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
   cog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.13.3.35.55.63.72"/></svg>',
   phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg>',
+  mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 6 10 7L22 6"/></svg>',
   clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
   alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
   doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
@@ -320,9 +321,9 @@ const ago = (iso) => { const d = D(iso); if(!d) return '';
   return Math.floor(s/86400) + 'd ago'; };
 
 let TAB = 'overview', DATA = {leads:[],applications:[],data_requests:[]}, C = {}, Q = '';
-let F = { leads:{status:'all',type:'all'}, contacts:{status:'all'}, applications:{status:'all',role:'All',office:'All',resume:'all'}, requests:{status:'all',due:'all'} };
+let F = { leads:{status:'all',type:'all'}, contacts:{status:'all'}, callbacks:{status:'all'}, applications:{status:'all',role:'All',office:'All',resume:'all'}, requests:{status:'all',due:'all'} };
 function tabList(){
-  const t = [['overview','Overview','home'],['leads','Leads','users'],['contacts','Contacts','phone'],
+  const t = [['overview','Overview','home'],['leads','Leads','users'],['callbacks','Callbacks','phone'],['contacts','Contacts','mail'],
              ['applications','Applicants','brief'],['requests','Data requests','lock'],['settings','Settings','cog']];
   if (DATA.super) { t.push(['admins','Admins','users']); t.push(['audit','Activity','doc']); }
   return t;
@@ -332,7 +333,7 @@ function paintTabs(){
   $('tabs').innerHTML = tabList().map(function(t){
     const k = t[0], l = t[1], ic = t[2];
     let pill = '';
-    if (k === 'leads' || k === 'contacts' || k === 'applications' || k === 'requests') {
+    if (k === 'leads' || k === 'contacts' || k === 'callbacks' || k === 'applications' || k === 'requests') {
       const n = C[k] || 0;
       const isAlert = k === 'requests' && (C.overdue || 0) > 0;
       pill = '<span class="pill ' + (isAlert ? 'alert' : (n ? '' : 'zero')) + '">' + n + '</span>';
@@ -344,10 +345,13 @@ function paintTabs(){
   });
 }
 
-const isContactRow = function(x){ return (x.type||'') === 'contact'; };
+const isContactRow  = function(x){ return (x.type||'') === 'contact'; };
+const isCallbackRow = function(x){ return (x.type||'') === 'callback'; };
+const isPlainLead   = function(x){ return !isContactRow(x) && !isCallbackRow(x); };
 function computeCounts(){
-  C = { leads:    DATA.leads.filter(function(x){return x.status==='new' && !isContactRow(x);}).length,
-        contacts: DATA.leads.filter(function(x){return x.status==='new' &&  isContactRow(x);}).length,
+  C = { leads:     DATA.leads.filter(function(x){return x.status==='new' && isPlainLead(x);}).length,
+        callbacks: DATA.leads.filter(function(x){return x.status==='new' && isCallbackRow(x);}).length,
+        contacts:  DATA.leads.filter(function(x){return x.status==='new' && isContactRow(x);}).length,
         applications: DATA.applications.filter(function(x){return x.status==='new';}).length,
         requests:  DATA.data_requests.filter(function(x){return x.status==='new';}).length,
         overdue:   DATA.data_requests.filter(function(x){return x.status==='new' && x.due_by && new Date(x.due_by) < new Date();}).length };
@@ -446,7 +450,8 @@ function chips(key, field, opts){
 }
 function filterRows(){
   const q = Q.toLowerCase().trim();
-  const rows = TAB === 'leads' ? DATA.leads.filter(function(x){ return !isContactRow(x); })
+  const rows = TAB === 'leads' ? DATA.leads.filter(isPlainLead)
+             : TAB === 'callbacks' ? DATA.leads.filter(isCallbackRow)
              : TAB === 'contacts' ? DATA.leads.filter(isContactRow)
              : TAB === 'applications' ? DATA.applications : DATA.data_requests;
   const f = F[TAB] || {};
@@ -473,8 +478,11 @@ function renderList(){
   let filters = '';
   if (TAB === 'leads') {
     filters = '<div class="frow"><span class="flbl">Status</span>' + chips('leads','status',[['all','All']].concat(STATUSES)) + '</div>'
-            + '<div class="frow"><span class="flbl">Type</span>' + chips('leads','type',[['all','All'],['callback','Callback'],['referral','Referral']])
-            + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(function(x){return !isContactRow(x);}).length + '</span></div>';
+            + '<div class="frow"><span class="flbl">Type</span>' + chips('leads','type',[['all','All'],['referral','Referral'],['lead','Other']])
+            + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(isPlainLead).length + '</span></div>';
+  } else if (TAB === 'callbacks') {
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('callbacks','status',[['all','All']].concat(STATUSES))
+            + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(isCallbackRow).length + '</span></div>';
   } else if (TAB === 'contacts') {
     filters = '<div class="frow"><span class="flbl">Status</span>' + chips('contacts','status',[['all','All']].concat(STATUSES))
             + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(isContactRow).length + '</span></div>';
@@ -506,7 +514,7 @@ function stSel(id, cur, kind){
     + '</select>';
 }
 async function setStatus(kind, id, status){
-  const ep = kind === 'contacts' ? 'leads' : kind;   // contacts live in the leads table
+  const ep = (kind === 'contacts' || kind === 'callbacks') ? 'leads' : kind;   // contacts & callbacks live in the leads table
   await api('/' + ep + '/' + id, {method:'PATCH', body:JSON.stringify({status:status})});
   const key = ep === 'requests' ? 'data_requests' : ep;
   const row = DATA[key].filter(function(x){ return x.id === id; })[0];
@@ -521,9 +529,9 @@ function saveNote(kind, id, v){
 }
 function cardFor(r){
   const isNew = r.status === 'new';
-  if (TAB === 'leads') return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
+  if (TAB === 'leads' || TAB === 'callbacks') return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
     + '<div><h3>' + esc(r.name) + '</h3><div class="meta">' + fmt(r.created_at) + ' &middot; ' + ago(r.created_at) + (r.page ? ' &middot; ' + esc(r.page) : '') + '</div></div>'
-    + '<div class="right"><span class="tag ' + esc(r.status) + '">' + esc(r.status) + '</span>' + stSel(r.id, r.status, 'leads') + '</div></div>'
+    + '<div class="right"><span class="tag ' + esc(r.status) + '">' + esc(r.status) + '</span>' + stSel(r.id, r.status, TAB) + '</div></div>'
     + '<div class="body"><div class="kv"><b>Phone</b><span><a class="tel" href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a></span></div>'
     + (r.email ? '<div class="kv"><b>Email</b><span><a class="tel" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></span></div>' : '')
     + '<div class="kv"><b>Service</b><span>' + esc(r.service||'-') + ' &middot; ' + esc(r.type||'-') + '</span></div>'
@@ -845,7 +853,7 @@ function render(){
 }
 async function pushContact(id, dest){
   try{
-    if (dest === 'leads') await api('/leads/' + id, {method:'PATCH', body:JSON.stringify({type:'callback'})});
+    if (dest === 'leads') await api('/leads/' + id, {method:'PATCH', body:JSON.stringify({type:'lead'})});
     else await api('/leads/' + id + '/to-application', {method:'POST', body:JSON.stringify({})});
     await load();
     go(dest);
@@ -870,5 +878,5 @@ function tickClock(){ const el = $('clockTx'); if(!el) return;
   el.textContent = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date()); }
 tickClock(); setInterval(tickClock, 1000);
 paintTabs(); load();
-setInterval(function(){ if (['overview','leads','contacts','applications','requests'].indexOf(TAB) > -1) load(); }, 60000);
+setInterval(function(){ if (['overview','leads','callbacks','contacts','applications','requests'].indexOf(TAB) > -1) load(); }, 60000);
 </script></body></html>`;
