@@ -132,6 +132,34 @@ function toBase64(buf) {
 }
 
 /* ---------------- config (KV, editable from the dashboard) ---------------- */
+// Seeded default so a fresh install already knows the standard US federal
+// closures (observed office dates). Shown in Settings and fully editable; once
+// an admin saves the field it becomes the source of truth (including empty).
+const DEFAULT_HOLIDAYS_TEXT = [
+  '2026-01-01 = New Year’s Day',
+  '2026-01-19 = Martin Luther King Jr. Day',
+  '2026-02-16 = Presidents’ Day',
+  '2026-05-25 = Memorial Day',
+  '2026-06-19 = Juneteenth National Independence Day',
+  '2026-07-03 = Independence Day (observed)',
+  '2026-09-07 = Labor Day',
+  '2026-11-11 = Veterans Day',
+  '2026-11-26 = Thanksgiving Day',
+  '2026-11-27 = Day after Thanksgiving',
+  '2026-12-25 = Christmas Day',
+  '2027-01-01 = New Year’s Day',
+  '2027-01-18 = Martin Luther King Jr. Day',
+  '2027-02-15 = Presidents’ Day',
+  '2027-05-31 = Memorial Day',
+  '2027-06-18 = Juneteenth National Independence Day (observed)',
+  '2027-07-05 = Independence Day (observed)',
+  '2027-09-06 = Labor Day',
+  '2027-11-11 = Veterans Day',
+  '2027-11-25 = Thanksgiving Day',
+  '2027-11-26 = Day after Thanksgiving',
+  '2027-12-24 = Christmas Day (observed)',
+].join('\n');
+
 async function getConfig(env) {
   let saved = {};
   try { saved = JSON.parse((await env.CONFIG.get('config')) || '{}'); } catch (e) { saved = {}; }
@@ -144,7 +172,9 @@ async function getConfig(env) {
     EMAIL_PRIVACY: saved.EMAIL_PRIVACY || env.EMAIL_PRIVACY || '',
     HOURS_OPEN: saved.HOURS_OPEN || '08:30',
     HOURS_CLOSE: saved.HOURS_CLOSE || '17:00',
-    HOLIDAYS_TEXT: saved.HOLIDAYS_TEXT || '',
+    // respect an explicit saved value (even empty); only fall back to the seed
+    // when the field has never been saved.
+    HOLIDAYS_TEXT: saved.HOLIDAYS_TEXT !== undefined ? saved.HOLIDAYS_TEXT : DEFAULT_HOLIDAYS_TEXT,
   };
 }
 

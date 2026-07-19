@@ -23,8 +23,13 @@ export const ADMIN_HTML = `<!DOCTYPE html>
   --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--body);background:var(--g50);color:var(--ink);-webkit-font-smoothing:antialiased;
-  padding-bottom:calc(24px + env(safe-area-inset-bottom));line-height:1.6}
+body{font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased;
+  padding-bottom:calc(24px + env(safe-area-inset-bottom));line-height:1.6;
+  background:
+    radial-gradient(1100px 560px at 100% -8%, rgba(143,209,239,.28), transparent 55%),
+    radial-gradient(900px 520px at -10% 8%, rgba(19,138,192,.10), transparent 50%),
+    linear-gradient(180deg, var(--ice-2) 0%, var(--g50) 42%, var(--g100) 100%);
+  background-attachment:fixed}
 :focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:6px}
 a{color:var(--blue-dark)}
 h1,h2,h3{font-family:var(--display);color:var(--navy);letter-spacing:-.01em}
@@ -37,6 +42,11 @@ header img{height:30px;width:auto}
 .hbadge{font-family:var(--nav);font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);padding:3px 9px;border-radius:999px}
 header .sp{margin-left:auto;display:flex;align-items:center;gap:9px}
+.clock{font-family:var(--nav);display:inline-flex;flex-direction:column;align-items:flex-end;line-height:1.08;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);padding:4px 11px;border-radius:10px;color:#fff}
+.clock b{font-size:.82rem;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.clock .clbl{font-size:.55rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#9FBBD0}
+@media(max-width:560px){.clock .clbl{display:none}.clock{padding:4px 9px}}
 .sync{font-family:var(--nav);font-size:.7rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
   padding:4px 10px;border-radius:999px;color:#CFE4F3;display:inline-flex;align-items:center;gap:6px}
 .sync .dot{width:6px;height:6px;border-radius:50%;background:#57D08D;animation:live 2s infinite}
@@ -206,6 +216,7 @@ a.tel:hover{text-decoration:underline}
   <img src="${LOGO_DATA}" alt="ProHealth">
   <span class="hbadge">Admin</span>
   <div class="sp">
+    <span class="clock" id="clock" title="Current Pacific time"><b id="clockTx">--:--:--</b><span class="clbl">ProHealth PST Time</span></span>
     <span class="sync" id="sync"><span class="dot"></span><span id="syncTx">&hellip;</span></span>
     <span class="who" id="who"></span>
     <button class="out" id="out" title="Sign out" aria-label="Sign out">
@@ -282,7 +293,7 @@ async function load(){
           applications: d.applications.filter(function(x){return x.status==='new';}).length,
           requests: d.data_requests.filter(function(x){return x.status==='new';}).length,
           overdue: overdue };
-    $('syncTx').textContent = new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit'}).format(new Date());
+    $('syncTx').textContent = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit'}).format(new Date());
     $('who').textContent = d.user || '';
     paintTabs(); render();
   } catch(e) {
@@ -644,6 +655,9 @@ $('out').onclick = async function(){
   await fetch('/admin/logout', {method:'POST'}).catch(function(){});
   location.href = '/admin';
 };
+function tickClock(){ const el = $('clockTx'); if(!el) return;
+  el.textContent = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date()); }
+tickClock(); setInterval(tickClock, 1000);
 paintTabs(); load();
 setInterval(function(){ if (TAB !== 'openings' && TAB !== 'settings') load(); }, 60000);
 </script></body></html>`;

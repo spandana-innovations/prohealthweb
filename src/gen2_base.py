@@ -178,41 +178,13 @@ FOOTER=f'''<footer class="site"><img class="foot-wm" src="{MONO_WHITE}" alt="" a
 </div>
 <div class="foot-bottom"><span>© 2026 ProHealth Home Care, Inc. · Medicare certified · Equal opportunity employer</span>
 <nav class="foot-legal" aria-label="Legal"><a href="/privacy-policy/">Privacy</a><a href="/notice-of-privacy-practices/">HIPAA Notice</a><a href="/terms/">Terms</a><a href="/accessibility/">Accessibility</a><a href="/nondiscrimination/">Nondiscrimination</a><a href="/data-request/">Data Requests</a>
-<a class="staff-login" id="staffLogin" href="#" rel="nofollow"><span class="sl-ic">{ICONS['lock']}</span><span id="staffLoginTx">Staff login</span></a></nav></div>
+</nav></div>
 </div></footer>'''
 
 # ---------- live footer status: PT clock + open/closed + public holidays ----------
-STAFF_JS = r'''
-/* Footer staff button. The admin lives on the API host, so the site cannot see
-   the (HttpOnly, SameSite=Strict) session cookie. On login the Worker also sets
-   a non-secret "ph_admin_hint" cookie on the parent domain purely so this label
-   can change. It carries no authority: faking it only shows a different word,
-   and the admin still demands a real session. */
-(function(){
-  const a=document.getElementById('staffLogin'); if(!a) return;
-  const base = window.PROHEALTH_API || '';
-  if(base){
-    a.href = base.replace(/\/$/,'') + '/admin';
-    a.target = '_blank'; a.rel = 'noopener';
-  } else {
-    /* The admin lives on the Worker, not on this static site. Without an API
-       base, /admin here is a 404 that looks like a refresh loop. Say so. */
-    a.href = '#';
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      alert('The staff dashboard is not connected yet.\n\n' +
-            'Deploy the backend:\n    cd worker && ./setup.sh\n\n' +
-            'Then add its URL to the site:\n    window.PROHEALTH_API = "https://prohealth-api.YOURNAME.workers.dev"');
-    });
-  }
-  const hint = (document.cookie || '').split('; ').find(c => c.startsWith('ph_admin_hint='));
-  if(hint && base){
-    const tx=document.getElementById('staffLoginTx');
-    if(tx) tx.textContent='View dashboard';
-    a.classList.add('in');
-  }
-})();
-'''
+# Staff-login button was removed from the footer. Staff reach the admin
+# directly at the Worker's /admin URL, so no public link is rendered.
+STAFF_JS = ''
 
 API_JS = '''
 /* Point this at your Worker once it is deployed. Until then submissions are
