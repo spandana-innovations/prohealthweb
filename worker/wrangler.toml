@@ -11,7 +11,7 @@ compatibility_date = "2026-07-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "prohealth-leads"
-database_id = "PASTE_ID_FROM__wrangler_d1_create"
+database_id = "336dbae3-bd5f-4a6a-bf01-6fdc259bd938"
 
 [[r2_buckets]]
 binding = "RESUMES"
@@ -19,7 +19,7 @@ bucket_name = "prohealth-resumes"
 
 [[kv_namespaces]]
 binding = "CONFIG"
-id = "PASTE_ID_FROM__wrangler_kv_namespace_create_CONFIG"
+id = "deec0f19fc754d59a3e6829a4faa012f"
 
 [vars]
 # ---------- ADMIN LOGIN ----------
