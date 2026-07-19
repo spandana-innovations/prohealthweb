@@ -184,6 +184,10 @@ table.log td{padding:9px 11px;border-top:1px solid var(--line);color:var(--ink);
 table.log td.lw{white-space:nowrap;color:var(--slate)}
 table.log td.ld{color:var(--slate);max-width:280px;word-break:break-word}
 table.log tbody tr:hover{background:var(--ice-2)}
+table.log .act.del{color:var(--red-ink)}
+table.log .act.add{color:var(--mint-ink)}
+table.log .act.upd{color:var(--blue-dark)}
+table.log .act.neu{color:var(--slate)}
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:10px;
   transition:box-shadow .16s}
 .card:hover{box-shadow:var(--shadow-soft)}
@@ -790,6 +794,63 @@ function renderAdmins(){
 }
 
 /* ---------------- activity / edit log tab (owner only) ---------------- */
+function cap(s){ s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+function auditNoun(table){ return table === 'leads' ? 'a lead' : table === 'applications' ? 'an applicant' : table === 'data_requests' ? 'a data request' : table; }
+function auditKind(a){ a = String(a || ''); if (/^(delete|erase)/i.test(a)) return 'del'; if (/^(add|invite|promote|set|send)/i.test(a)) return 'add'; if (/^(download|search)/i.test(a)) return 'neu'; return 'upd'; }
+function auditAction(a){
+  a = String(a || '');
+  const map = {
+    'update config':'Updated settings', 'update openings':'Updated job openings',
+    'download resume':'Downloaded a résumé', 'promote contact to applicant':'Moved a contact to Applicants',
+    'ERASE personal data':'Erased a person’s data', 'search by email':'Searched records by email',
+    'send reset link':'Sent a password-reset link', 'set admin password':'Set an admin’s password',
+    'remove admin':'Removed an admin', 'password set via reset link':'Set a password via email link',
+    'add admin (magic link)':'Invited an admin by email', 'add admin (password set)':'Added an admin',
+    'add admin (no notify)':'Added an admin (no email)',
+  };
+  if (map[a]) return map[a];
+  const m = a.match(/^(delete|update)\\s+(leads|applications|data_requests)$/);
+  if (m) return (m[1] === 'delete' ? 'Deleted ' : 'Updated ') + auditNoun(m[2]);
+  return cap(a);
+}
+function auditName(id){
+  const all = (DATA.leads||[]).concat(DATA.applications||[]).concat(DATA.data_requests||[]);
+  const r = all.filter(function(x){ return x.id === id; })[0];
+  return r ? (r.name || '') : '';
+}
+function auditTarget(action, target){
+  target = String(target || '');
+  if (!target) return '—';
+  if (target.indexOf('resumes/') === 0) return target.split('/').pop().replace(/^[0-9a-fA-F-]{36}-/, '') || target;
+  if (target.indexOf('@') > -1) return target;
+  const nm = auditName(target);
+  if (nm) return nm;
+  if (/^[0-9a-f]{8}-[0-9a-f-]+$/i.test(target)) return 'record #' + target.slice(0, 8);
+  return target;
+}
+function auditDetail(action, detail){
+  detail = String(detail || '');
+  if (!detail) return '';
+  if (/^[A-Z_]+(,[A-Z_]+)*$/.test(detail)) {
+    const L = {EMAIL_FROM:'Sender address',EMAIL_DEFAULT:'Default inbox',EMAIL_INTAKE:'Intake inbox',EMAIL_HOSPICE:'Hospice inbox',EMAIL_CAREERS:'Careers inbox',EMAIL_PRIVACY:'Privacy inbox',HOURS_OPEN:'Opening time',HOURS_CLOSE:'Closing time',HOLIDAYS_TEXT:'Holiday closures'};
+    return 'Changed: ' + detail.split(',').map(function(k){ return L[k] || k; }).join(', ');
+  }
+  if (detail.charAt(0) === '{') {
+    try {
+      const o = JSON.parse(detail), keys = Object.keys(o);
+      if (keys.length && keys.every(function(k){ return typeof o[k] === 'number'; }))
+        return 'Removed ' + keys.map(function(k){ return o[k] + ' ' + k; }).join(', ');
+      const FL = {status:'Status',notes:'Notes',type:'Type',name:'Name',phone:'Phone',email:'Email',service:'Service',message:'Message',role:'Role',office:'Office',license:'License',request_type:'Request type',relationship:'Relationship',dob:'DOB',details:'Details'};
+      return keys.map(function(k){
+        const lbl = FL[k] || k, v = o[k];
+        if (k === 'status') return 'Status → ' + cap(v);
+        if (typeof v === 'string' && v.length > 0 && v.length <= 40) return lbl + ' → ' + v;
+        return 'Edited ' + lbl.toLowerCase();
+      }).join(', ');
+    } catch (e) { /* fall through */ }
+  }
+  return detail;
+}
 async function renderAudit(){
   if (!DATA.super) { $('view').innerHTML = '<div class="err">Owner only.</div>'; return; }
   $('view').innerHTML = '<div class="empty"><span class="spin"></span></div>';
@@ -797,9 +858,11 @@ async function renderAudit(){
   try { const d = await api('/audit'); log = d.log || []; }
   catch(e) { $('view').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; return; }
   const rows = log.map(function(x){
-    return '<tr><td class="lw">' + fmt(x.created_at) + '</td><td>' + esc(x.actor || '') + '</td>'
-      + '<td><b>' + esc(x.action || '') + '</b></td><td>' + esc(x.target || '') + '</td>'
-      + '<td class="ld">' + esc(x.detail || '') + '</td></tr>';
+    return '<tr><td class="lw">' + fmt(x.created_at) + '</td>'
+      + '<td>' + esc(x.actor || '') + '</td>'
+      + '<td><b class="act ' + auditKind(x.action) + '">' + esc(auditAction(x.action)) + '</b></td>'
+      + '<td>' + esc(auditTarget(x.action, x.target)) + '</td>'
+      + '<td class="ld">' + esc(auditDetail(x.action, x.detail)) + '</td></tr>';
   }).join('');
   $('view').innerHTML = '<div class="panel"><h2><span class="pi">' + I.doc + '</span>Activity &amp; edit log</h2>'
     + '<p class="sub">Every action taken in the dashboard, newest first. Owner only &middot; last ' + log.length + ' entries.</p>'
