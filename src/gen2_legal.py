@@ -313,10 +313,13 @@ shell('data-request','Data Request | Access or Delete Your Data | ProHealth',
 <li><a href="/accessibility/">Accessibility Statement</a>, and how to request an accessible format of any of this</li></ul>
 </div></section>''',
  {"@context":"https://schema.org","@graph":[faq_ld(dr_faqs)]}, active='',
- extra_js='''document.getElementById('drForm').addEventListener('submit',function(e){e.preventDefault();
+ extra_js='''document.getElementById('drForm').addEventListener('submit',async function(e){e.preventDefault();
 const g=id=>document.getElementById(id).value;
-const ref='DR-'+Date.now().toString(36).toUpperCase();
-console.log('DATA REQUEST CAPTURED (POST /data-requests in production):',{ref:ref,request:g('dr-type'),relationship:g('dr-rel'),name:g('dr-name'),dob:g('dr-dob'),email:g('dr-email'),phone:g('dr-phone'),details:g('dr-details'),agent:document.getElementById('dr-agent').checked,declared:true,ts:new Date().toISOString(),dueBy:new Date(Date.now()+45*864e5).toISOString()});
-document.getElementById('drRef').textContent=ref;
-this.hidden=true;document.getElementById('drOk').hidden=false;});''')
+const _b=this.querySelector('[type=submit]'); if(_b) _b.disabled=true;
+try{
+  const _r=await postJSON('/data-requests',{request_type:g('dr-type'),relationship:g('dr-rel'),name:g('dr-name'),dob:g('dr-dob'),email:g('dr-email'),phone:g('dr-phone'),details:g('dr-details'),is_agent:document.getElementById('dr-agent').checked});
+  document.getElementById('drRef').textContent=(_r&&_r.ref)?_r.ref:('DR-'+Date.now().toString(36).toUpperCase());
+  this.hidden=true;document.getElementById('drOk').hidden=false;
+}catch(err){ if(_b) _b.disabled=false; alert(err.message||'Could not send. Please call 877.667.8770.'); }
+});''')
 print('legal pages done')

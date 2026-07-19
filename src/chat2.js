@@ -357,14 +357,16 @@ function leadForm(kind){
     <label for="cf-phone">Phone number</label>
     <input id="cf-phone" required type="tel" autocomplete="tel" placeholder="(555) 555-5555">
     <button class="btn btn-blue" type="submit">${kind==='referral'?'Send to intake team':'Request my callback'}</button>`;
-  f.onsubmit=(e)=>{
+  f.onsubmit=async (e)=>{
     e.preventDefault();
     const lead={ ...leadDraft, name:f.querySelector('#cf-name').value, phone:f.querySelector('#cf-phone').value,
                  type:kind, page:location.pathname, ts:new Date().toISOString() };
     leads.push(lead);
-    console.log('LEAD CAPTURED (POST to /api/leads in production):', lead);
+    const _b=f.querySelector('button'); if(_b){ _b.disabled=true; _b.textContent='Sending…'; }
     f.remove();
     addMsg(`${lead.name} · ${lead.phone}`,'user');
+    try{ await postJSON('/leads', lead); }
+    catch(err){ addMsg(`I couldn't send that just now. Please call us at ${PHONE} and we'll help right away.`); return; }
     const h = hoursState();
     if(kind==='referral'){
       addMsg(h.open

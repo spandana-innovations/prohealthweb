@@ -187,9 +187,13 @@ FOOTER=f'''<footer class="site"><img class="foot-wm" src="{MONO_WHITE}" alt="" a
 STAFF_JS = ''
 
 API_JS = '''
-/* Point this at your Worker once it is deployed. Until then submissions are
-   logged to the console so the site is usable without a backend. */
-const API_BASE = window.PROHEALTH_API || '';
+/* The site talks to the Cloudflare Worker for lead / application / data-request
+   capture. window.PROHEALTH_API (injected by connect-api.sh) wins; otherwise we
+   fall back to the production Worker so a plain deploy still reaches the backend.
+   Set it to '' only if you deliberately want offline (console-only) forms. */
+const API_BASE = (typeof window.PROHEALTH_API === 'string')
+  ? window.PROHEALTH_API
+  : 'https://prohealth-api.calm-hall-dd9a.workers.dev';
 async function postJSON(path, data){
   if(!API_BASE){ console.log('[no API_BASE] would POST', path, data); return {ok:true, offline:true}; }
   const r = await fetch(API_BASE+path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});

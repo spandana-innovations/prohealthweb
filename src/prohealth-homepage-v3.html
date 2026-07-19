@@ -762,14 +762,16 @@ function leadForm(kind){
     <label for="cf-phone">Phone number</label>
     <input id="cf-phone" required type="tel" autocomplete="tel" placeholder="(555) 555-5555">
     <button class="btn btn-blue" type="submit">${kind==='referral'?'Send to intake team':'Request my callback'}</button>`;
-  f.onsubmit=(e)=>{
+  f.onsubmit=async (e)=>{
     e.preventDefault();
     const lead={ ...leadDraft, name:f.querySelector('#cf-name').value, phone:f.querySelector('#cf-phone').value,
                  type:kind, page:location.pathname, ts:new Date().toISOString() };
     leads.push(lead);
-    console.log('LEAD CAPTURED (POST to /api/leads in production):', lead);
+    const _b=f.querySelector('button'); if(_b){ _b.disabled=true; _b.textContent='Sending…'; }
     f.remove();
     addMsg(`${lead.name} · ${lead.phone}`,'user');
+    try{ await postJSON('/leads', lead); }
+    catch(err){ addMsg("I couldn't send that just now. Please call us at 877.667.8770 and we'll help right away."); return; }
     addMsg(kind==='referral'
       ? "Got it — your referral request is with our intake team. Expect a call within 2 hours during business hours. Thank you!"
       : `Thank you, ${lead.name.split(' ')[0]}! Our care team will call you shortly about ${leadDraft.service||'your inquiry'}. If it's urgent, call 877.667.8770 anytime.`);

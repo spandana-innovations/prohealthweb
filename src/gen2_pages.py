@@ -388,10 +388,15 @@ shell('refer-a-patient','Refer a Patient | ProHealth Home Care',
  {"@context":"https://schema.org","@graph":[faq_ld(refer_faqs)]}, active='/refer-a-patient/',
  extra_js=CAPTCHA_JS+'''
 const _rf=document.getElementById('referForm'); const _rfCap=initCap('rf',_rf);
-_rf.addEventListener('submit',function(e){e.preventDefault(); if(!_rfCap()) return;
+_rf.addEventListener('submit',async function(e){e.preventDefault(); if(!_rfCap()) return;
 const g=id=>document.getElementById(id).value;
-console.log('REFERRAL CAPTURED (POST /leads in production):',{patient:g('rf-patient'),dob:g('rf-dob'),insurance:g('rf-ins'),county:g('rf-county'),service:g('rf-svc'),notes:g('rf-notes'),referrer:g('rf-name'),org:g('rf-org'),phone:g('rf-phone'),type:'referral',ts:new Date().toISOString()});
-this.hidden=true;document.getElementById('referOk').hidden=false;});''')
+const _b=_rf.querySelector('[type=submit]'); if(_b) _b.disabled=true;
+const _msg=['Patient: '+g('rf-patient'),'DOB: '+g('rf-dob'),'Insurance: '+g('rf-ins'),'County: '+g('rf-county'),'Organisation: '+g('rf-org'),'Notes: '+g('rf-notes')].join('\\n');
+try{
+  await postJSON('/leads',{type:'referral',service:g('rf-svc'),name:g('rf-name'),phone:g('rf-phone'),message:_msg,page:location.pathname});
+  this.hidden=true;document.getElementById('referOk').hidden=false;
+}catch(err){ if(_b) _b.disabled=false; alert(err.message||'Could not send. Please call 877.667.8770.'); }
+});''')
 
 # ---------------- CAREERS ----------------
 OPENINGS_JS = '''
@@ -510,11 +515,19 @@ shell('careers','Careers | Nursing & Caregiver Jobs | ProHealth',
  active='/careers/',
  extra_js=YT_JS+YT_THUMB_JS+FILE_JS+CAPTCHA_JS+OPENINGS_JS+'''
 const _af=document.getElementById('applyForm'); const _afCap=initCap('ap',_af);
-_af.addEventListener('submit',function(e){e.preventDefault(); if(!_afCap()) return;
+_af.addEventListener('submit',async function(e){e.preventDefault(); if(!_afCap()) return;
 const g=id=>document.getElementById(id).value;const file=document.getElementById('ap-resume').files[0];
 if(file && (file.size>2*1024*1024 || !/pdf$/i.test(file.type+file.name))){alert('Please attach a PDF under 2 MB.');return;}
-console.log('APPLICATION CAPTURED (POST /applications in production):',{name:g('ap-name'),phone:g('ap-phone'),email:g('ap-email'),role:g('ap-role'),office:g('ap-office'),license:g('ap-lic'),resume:file?file.name:'(none)',consent:true,ts:new Date().toISOString()});
-this.hidden=true;document.getElementById('applyOk').hidden=false;});''')
+const _b=_af.querySelector('[type=submit]'); if(_b) _b.disabled=true;
+const fd=new FormData();
+fd.append('name',g('ap-name'));fd.append('phone',g('ap-phone'));fd.append('email',g('ap-email'));
+fd.append('role',g('ap-role'));fd.append('office',g('ap-office'));fd.append('license',g('ap-lic'));
+if(file) fd.append('resume',file);
+try{
+  await postForm('/applications',fd);
+  this.hidden=true;document.getElementById('applyOk').hidden=false;
+}catch(err){ if(_b) _b.disabled=false; alert(err.message||'Could not send. Please call 877.667.8770.'); }
+});''')
 
 # ---------------- CONTACT (form-focused) ----------------
 shell('contact',f'Contact ProHealth Home Care | California, {PHONE}',
@@ -550,10 +563,14 @@ shell('contact',f'Contact ProHealth Home Care | California, {PHONE}',
  {"@context":"https://schema.org","@graph":[BIZ]}, active='/contact/',
  extra_js=CAPTCHA_JS+'''
 const _cf=document.getElementById('contactForm'); const _cfCap=initCap('ct',_cf);
-_cf.addEventListener('submit',function(e){e.preventDefault(); if(!_cfCap()) return;
+_cf.addEventListener('submit',async function(e){e.preventDefault(); if(!_cfCap()) return;
 const g=id=>document.getElementById(id).value;
-console.log('CONTACT CAPTURED (POST /leads in production):',{name:g('ct-name'),phone:g('ct-phone'),email:g('ct-email'),topic:g('ct-topic'),message:g('ct-msg'),type:'contact',ts:new Date().toISOString()});
-this.hidden=true;document.getElementById('contactOk').hidden=false;});''')
+const _b=_cf.querySelector('[type=submit]'); if(_b) _b.disabled=true;
+try{
+  await postJSON('/leads',{type:'contact',service:g('ct-topic'),name:g('ct-name'),phone:g('ct-phone'),email:g('ct-email'),message:g('ct-msg'),page:location.pathname});
+  this.hidden=true;document.getElementById('contactOk').hidden=false;
+}catch(err){ if(_b) _b.disabled=false; alert(err.message||'Could not send. Please call 877.667.8770.'); }
+});''')
 
 # ---------------- ABOUT ----------------
 vals=''.join(f'<article class="d-card reveal{["", " d1", " d2", " d3"][i]}"><span class="ic">{ICONS[ic]}</span><h3>{t}</h3><p>{p}</p></article>'

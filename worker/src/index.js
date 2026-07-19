@@ -29,7 +29,9 @@ const ALLOWED_ORIGINS = [
   'https://prohealth.us',
   'https://www.prohealth.us',
   'https://prohealth.pages.dev',
+  'https://prohealth-1oi.pages.dev',
   'http://localhost:3000',
+  'http://localhost:8000',
 ];
 
 export default {
