@@ -167,6 +167,15 @@ main{padding:18px;max-width:1180px;margin:0 auto}
 .modal-x:hover{background:var(--red);color:var(--red-ink)}
 .modal-body{flex:1;background:var(--g100)}
 .modal-body iframe{width:100%;height:100%;border:none;display:block}
+.editform{padding:20px 22px;background:#fff;height:100%;overflow:auto}
+.editform label{display:block;font-family:var(--nav);font-size:.76rem;font-weight:600;color:var(--slate);margin:12px 0 5px}
+.editform label:first-child{margin-top:0}
+.editform input,.editform textarea{width:100%;font:inherit;font-size:.9rem;padding:10px 12px;border:1px solid var(--g200);border-radius:9px;background:var(--g50)}
+.editform input:focus,.editform textarea:focus{outline:2px solid var(--blue);border-color:var(--blue);background:#fff}
+.editbtns{display:flex;gap:8px;margin-top:18px}
+/* per-record action row */
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.tag.archived{background:var(--g100);color:var(--slate)}
 /* activity log */
 .logwrap{overflow-x:auto;border:1px solid var(--line);border-radius:11px}
 table.log{width:100%;border-collapse:collapse;font-size:.8rem}
@@ -433,6 +442,7 @@ function recent(){
 
 /* ---------------- lists ---------------- */
 const STATUSES = ['new','contacted','converted','closed'];
+const STATUS_CHIPS = [['all','All'],['new','New'],['contacted','Contacted'],['converted','Converted'],['closed','Closed'],['archived','Archived']];
 const ROLE_GROUPS = [['All','All roles'],['Nursing','Nursing'],['Therapy','Therapy'],['Care','Aides & care'],['Office','Office & social']];
 function roleGroup(t){
   t = (t||'').toLowerCase();
@@ -456,7 +466,8 @@ function filterRows(){
              : TAB === 'applications' ? DATA.applications : DATA.data_requests;
   const f = F[TAB] || {};
   return rows.filter(function(r){
-    if (f.status && f.status !== 'all' && r.status !== f.status) return false;
+    if (f.status === 'all' || !f.status) { if (r.status === 'archived') return false; }   // hide archived unless asked
+    else if (r.status !== f.status) return false;
     if (TAB === 'leads' && f.type !== 'all' && r.type !== f.type) return false;
     if (TAB === 'applications') {
       if (f.role !== 'All' && roleGroup(r.role) !== f.role) return false;
@@ -477,24 +488,24 @@ function renderList(){
   const rows = filterRows();
   let filters = '';
   if (TAB === 'leads') {
-    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('leads','status',[['all','All']].concat(STATUSES)) + '</div>'
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('leads','status',STATUS_CHIPS) + '</div>'
             + '<div class="frow"><span class="flbl">Type</span>' + chips('leads','type',[['all','All'],['referral','Referral'],['lead','Other']])
             + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(isPlainLead).length + '</span></div>';
   } else if (TAB === 'callbacks') {
-    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('callbacks','status',[['all','All']].concat(STATUSES))
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('callbacks','status',STATUS_CHIPS)
             + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(isCallbackRow).length + '</span></div>';
   } else if (TAB === 'contacts') {
-    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('contacts','status',[['all','All']].concat(STATUSES))
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('contacts','status',STATUS_CHIPS)
             + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(isContactRow).length + '</span></div>';
   } else if (TAB === 'applications') {
     const offices = ['All'].concat(DATA.applications.map(function(a){return a.office;}).filter(function(v,i,s){ return v && s.indexOf(v)===i; }));
-    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('applications','status',[['all','All']].concat(STATUSES)) + '</div>'
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('applications','status',STATUS_CHIPS) + '</div>'
             + '<div class="frow"><span class="flbl">Role</span>' + chips('applications','role',ROLE_GROUPS) + '</div>'
             + '<div class="frow"><span class="flbl">Office</span>' + chips('applications','office',offices) + '</div>'
             + '<div class="frow"><span class="flbl">Resume</span>' + chips('applications','resume',[['all','Any'],['yes','Attached'],['no','Missing']])
             + '<span class="fcount">' + rows.length + ' of ' + DATA.applications.length + '</span></div>';
   } else {
-    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('requests','status',[['all','All']].concat(STATUSES)) + '</div>'
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('requests','status',STATUS_CHIPS) + '</div>'
             + '<div class="frow"><span class="flbl">Deadline</span>' + chips('requests','due',[['all','Any'],['overdue','Overdue'],['soon','Due soon']])
             + '<span class="fcount">' + rows.length + ' of ' + DATA.data_requests.length + '</span></div>';
   }
@@ -509,9 +520,55 @@ function renderList(){
   if (q) q.oninput = function(){ Q = q.value; renderList(); const n = $('q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
 }
 function stSel(id, cur, kind){
+  const opts = cur === 'archived' ? STATUSES.concat(['archived']) : STATUSES;
   return '<select class="st" onchange="setStatus(\\'' + kind + '\\',\\'' + id + '\\',this.value)">'
-    + STATUSES.map(function(s){ return '<option value="' + s + '"' + (cur===s?' selected':'') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'; }).join('')
+    + opts.map(function(s){ return '<option value="' + s + '"' + (cur===s?' selected':'') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'; }).join('')
     + '</select>';
+}
+/* per-record actions: Edit / Archive-Unarchive / Delete */
+function cardActions(kind, r){
+  const arch = r.status === 'archived';
+  return '<div class="acts">'
+    + '<button class="mini" onclick="openEdit(\\'' + kind + '\\',\\'' + r.id + '\\')">Edit</button>'
+    + (arch
+        ? '<button class="mini" onclick="setStatus(\\'' + kind + '\\',\\'' + r.id + '\\',\\'new\\')">Unarchive</button>'
+        : '<button class="mini" onclick="setStatus(\\'' + kind + '\\',\\'' + r.id + '\\',\\'archived\\')">Archive</button>')
+    + '<button class="mini danger" onclick="deleteRow(\\'' + kind + '\\',\\'' + r.id + '\\')">Delete</button>'
+    + '</div>';
+}
+const EDIT_FIELDS = {
+  leads:        [['name','Name'],['phone','Phone'],['email','Email'],['service','Service / topic'],['message','Message','textarea']],
+  applications: [['name','Name'],['phone','Phone'],['email','Email'],['role','Role'],['office','Office'],['license','License']],
+  requests:     [['name','Name'],['email','Email'],['phone','Phone'],['request_type','Request type'],['relationship','Relationship'],['dob','DOB'],['details','Details','textarea']],
+};
+function epOf(kind){ return (kind === 'contacts' || kind === 'callbacks') ? 'leads' : kind; }
+function keyOf(ep){ return ep === 'requests' ? 'data_requests' : ep; }
+function openEdit(kind, id){
+  const ep = epOf(kind), r = (DATA[keyOf(ep)] || []).filter(function(x){ return x.id === id; })[0];
+  if (!r) return;
+  const form = (EDIT_FIELDS[ep] || []).map(function(fld){
+    const v = r[fld[0]] == null ? '' : r[fld[0]];
+    return '<label>' + fld[1] + '</label>' + (fld[2] === 'textarea'
+      ? '<textarea id="ef_' + fld[0] + '" rows="3">' + esc(v) + '</textarea>'
+      : '<input id="ef_' + fld[0] + '" value="' + esc(v) + '">');
+  }).join('');
+  $('modalTitle').textContent = 'Edit record';
+  $('modalOpen').style.display = 'none';
+  $('modalBody').innerHTML = '<div class="editform">' + form
+    + '<div class="editbtns"><button class="btn pri" onclick="saveEdit(\\'' + ep + '\\',\\'' + id + '\\')">' + I.check + 'Save changes</button>'
+    + '<button class="btn" onclick="closeModal()">Cancel</button></div><div id="editMsg"></div></div>';
+  $('modal').hidden = false; document.body.style.overflow = 'hidden';
+}
+async function saveEdit(ep, id){
+  const body = {};
+  (EDIT_FIELDS[ep] || []).forEach(function(fld){ const el = $('ef_' + fld[0]); if (el) body[fld[0]] = el.value; });
+  try { await api('/' + ep + '/' + id, {method:'PATCH', body:JSON.stringify(body)}); closeModal(); await load(); }
+  catch(e){ const t = $('editMsg'); if (t) t.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+async function deleteRow(kind, id){
+  if (!confirm('Delete this record permanently?\\n\\nThis cannot be undone. It is written to the activity log.')) return;
+  try { await api('/' + epOf(kind) + '/' + id, {method:'DELETE'}); await load(); }
+  catch(e){ alert(e.message); }
 }
 async function setStatus(kind, id, status){
   const ep = (kind === 'contacts' || kind === 'callbacks') ? 'leads' : kind;   // contacts & callbacks live in the leads table
@@ -536,7 +593,7 @@ function cardFor(r){
     + (r.email ? '<div class="kv"><b>Email</b><span><a class="tel" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></span></div>' : '')
     + '<div class="kv"><b>Service</b><span>' + esc(r.service||'-') + ' &middot; ' + esc(r.type||'-') + '</span></div>'
     + (r.message ? '<div class="kv"><b>Message</b><span>' + esc(r.message) + '</span></div>' : '') + '</div>'
-    + '<textarea class="note" placeholder="Notes (saved automatically)" oninput="saveNote(\\'leads\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
+    + '<textarea class="note" placeholder="Notes (saved automatically)" oninput="saveNote(\\'leads\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea>' + cardActions(TAB, r) + '</div>';
 
   if (TAB === 'contacts') return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
     + '<div><h3>' + esc(r.name) + '</h3><div class="meta">' + fmt(r.created_at) + ' &middot; ' + ago(r.created_at) + (r.page ? ' &middot; ' + esc(r.page) : '') + '</div></div>'
@@ -548,7 +605,7 @@ function cardFor(r){
     + '<div class="pushrow"><span class="pushlbl">Push to</span>'
     + '<button class="btn sm" onclick="pushContact(\\'' + r.id + '\\',\\'leads\\')">' + I.users + 'Leads</button>'
     + '<button class="btn sm" onclick="pushContact(\\'' + r.id + '\\',\\'applications\\')">' + I.brief + 'Applicants</button></div>'
-    + '<textarea class="note" placeholder="Notes (saved automatically)" oninput="saveNote(\\'leads\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
+    + '<textarea class="note" placeholder="Notes (saved automatically)" oninput="saveNote(\\'leads\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea>' + cardActions('contacts', r) + '</div>';
 
   if (TAB === 'applications') return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
     + '<div><h3>' + esc(r.name) + '</h3><div class="meta">' + fmt(r.created_at) + ' &middot; ' + ago(r.created_at) + '</div></div>'
@@ -559,7 +616,7 @@ function cardFor(r){
     + (r.email ? '<div class="kv"><b>Email</b><span><a class="tel" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></span></div>' : '')
     + '<div class="kv"><b>Role</b><span>' + esc(r.role||'-') + (r.office ? ' &middot; ' + esc(r.office) : '') + '</span></div>'
     + (r.license ? '<div class="kv"><b>License</b><span>' + esc(r.license) + '</span></div>' : '') + '</div>'
-    + '<textarea class="note" placeholder="Interview notes (saved automatically)" oninput="saveNote(\\'applications\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
+    + '<textarea class="note" placeholder="Interview notes (saved automatically)" oninput="saveNote(\\'applications\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea>' + cardActions('applications', r) + '</div>';
 
   const od = r.status === 'new' && r.due_by && new Date(r.due_by) < new Date();
   const days = r.due_by ? Math.ceil((new Date(r.due_by) - Date.now())/864e5) : null;
@@ -576,7 +633,7 @@ function cardFor(r){
     + (r.details ? '<div class="kv"><b>Details</b><span>' + esc(r.details) + '</span></div>' : '')
     + '<div class="kv"><b>Due by</b><span>' + (r.due_by ? fmt(r.due_by) : '-') + ' &middot; 45 calendar days (CCPA)</span></div></div>'
     + eraseBox(r)
-    + '<textarea class="note" placeholder="Privacy Officer notes (saved automatically)" oninput="saveNote(\\'requests\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
+    + '<textarea class="note" placeholder="Privacy Officer notes (saved automatically)" oninput="saveNote(\\'requests\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea>' + cardActions('requests', r) + '</div>';
 }
 
 /* ---------------- find & erase ---------------- */
@@ -863,7 +920,7 @@ async function pushContact(id, dest){
 function openResume(key){
   const url = '/admin/api/resume?key=' + encodeURIComponent(key);
   $('modalTitle').textContent = 'Résumé — ' + (String(key).split('/').pop() || '');
-  $('modalOpen').href = url;
+  $('modalOpen').style.display = ''; $('modalOpen').href = url;
   $('modalBody').innerHTML = '<iframe src="' + url + '" title="Résumé preview"></iframe>';
   $('modal').hidden = false; document.body.style.overflow = 'hidden';
 }

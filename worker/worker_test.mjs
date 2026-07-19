@@ -178,6 +178,31 @@ await t('a lead with no email sends no acknowledgement (only staff notify)', asy
   return !tos.includes('');   // never an ack to an empty address
 });
 
+// --- per-record delete / edit / archive ---
+await t('DELETE /leads/:id removes a record (owner/admin)', async()=>
+  (await worker.fetch(P('/admin/api/leads/x0',{method:'DELETE',headers:ADMIN}), env)).status===200);
+await t('DELETE /applications/:id works', async()=>
+  (await worker.fetch(P('/admin/api/applications/x0',{method:'DELETE',headers:ADMIN}), env)).status===200);
+await t('DELETE requires auth (401 signed out)', async()=>
+  (await worker.fetch(P('/admin/api/leads/x0',{method:'DELETE'}), env)).status===401);
+await t('DELETE writes to the audit log', async()=>{
+  const before = rows.audit_log.length;
+  await worker.fetch(P('/admin/api/leads/x1',{method:'DELETE',headers:ADMIN}), env);
+  return rows.audit_log.length > before; });
+await t('PATCH can edit whitelisted fields (name + phone)', async()=>
+  (await worker.fetch(P('/admin/api/leads/x0',{method:'PATCH',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({name:'Edited Name',phone:'999'})}), env)).status===200);
+await t('PATCH accepts the archived status', async()=>
+  (await worker.fetch(P('/admin/api/leads/x0',{method:'PATCH',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({status:'archived'})}), env)).status===200);
+await t('PATCH still rejects an unknown status', async()=>
+  (await worker.fetch(P('/admin/api/leads/x0',{method:'PATCH',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({status:'nope'})}), env)).status===400);
+await t('PATCH ignores non-whitelisted columns (no injection)', async()=>{
+  const r = await worker.fetch(P('/admin/api/applications/x0',{method:'PATCH',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({resume_key:'hack',bogus:'x'})}), env);
+  return r.status===400 && (await r.json()).error==='nothing to update'; });
+
 out.forEach(l=>console.log('  '+l));
 console.log('\n'+out.filter(x=>x.startsWith('PASS')).length+'/'+out.length+' passed');
 process.exit(out.some(x=>x.startsWith('FAIL'))?1:0);

@@ -368,6 +368,13 @@ async function handleDataRequest(req, env, cors) {
 
 /* ---------------- admin API ---------------- */
 const TABLE = { leads: 'leads', applications: 'applications', requests: 'data_requests' };
+// Columns an admin may edit per table (name -> max length). Keys are a fixed
+// whitelist, so they are safe to interpolate into the UPDATE statement.
+const EDITABLE = {
+  leads:         { name: 120, phone: 40, email: 160, service: 80, message: 4000, type: 40 },
+  applications:  { name: 120, phone: 40, email: 160, role: 80, office: 60, license: 60 },
+  data_requests: { name: 120, email: 160, phone: 40, request_type: 160, relationship: 80, dob: 20, details: 4000 },
+};
 
 async function adminApi(req, env, path, url, who) {
   if (path === '/all' && req.method === 'GET') {
@@ -380,20 +387,30 @@ async function adminApi(req, env, path, url, who) {
   }
 
   const m = path.match(/^\/(leads|applications|requests)\/([\w-]+)$/);
+  if (m && req.method === 'DELETE') {
+    const table = TABLE[m[1]], id = m[2];
+    if (table === 'applications') {
+      const row = (await env.DB.prepare('SELECT resume_key FROM applications WHERE id = ?').bind(id).all()).results[0];
+      if (row && row.resume_key) { try { await env.RESUMES.delete(row.resume_key); } catch (e) {} }
+    }
+    await env.DB.prepare('DELETE FROM ' + table + ' WHERE id = ?').bind(id).run();
+    await audit(env, who, 'delete ' + table, id, '');
+    return json({ ok: true });
+  }
   if (m && req.method === 'PATCH') {
     const table = TABLE[m[1]], id = m[2];
     const b = await req.json();
     const sets = [], vals = [];
     if (b.status !== undefined) {
-      if (['new', 'contacted', 'converted', 'closed'].indexOf(b.status) === -1) return json({ error: 'bad status' }, {}, 400);
+      if (['new', 'contacted', 'converted', 'closed', 'archived'].indexOf(b.status) === -1) return json({ error: 'bad status' }, {}, 400);
       sets.push('status = ?'); vals.push(b.status);
     }
     if (b.notes !== undefined) { sets.push('notes = ?'); vals.push(clean(b.notes, 8000)); }
-    if (b.type !== undefined && table === 'leads') { sets.push('type = ?'); vals.push(clean(b.type, 40)); }
+    const editable = EDITABLE[table] || {};
+    for (const k in editable) if (b[k] !== undefined) { sets.push(k + ' = ?'); vals.push(clean(b[k], editable[k])); }
     if (!sets.length) return json({ error: 'nothing to update' }, {}, 400);
     vals.push(id);
-    const stmt = env.DB.prepare('UPDATE ' + table + ' SET ' + sets.join(', ') + ' WHERE id = ?');
-    await stmt.bind(...vals).run();
+    await env.DB.prepare('UPDATE ' + table + ' SET ' + sets.join(', ') + ' WHERE id = ?').bind(...vals).run();
     await audit(env, who, 'update ' + table, id, JSON.stringify(b).slice(0, 300));
     return json({ ok: true });
   }
