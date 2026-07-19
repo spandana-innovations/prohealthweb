@@ -11,8 +11,8 @@
    ============================================================ */
 
 const SESSION_HOURS = 8;
-const MAX_FAILS = 8;          // per IP
-const LOCK_MINUTES = 15;
+const MAX_FAILS = 3;          // per IP — lock after this many failed logins
+const LOCK_MINUTES = 60;      // ...for this long (1 hour)
 
 /* ---------- small crypto helpers ---------- */
 const enc = new TextEncoder();
@@ -148,10 +148,17 @@ export async function handleLogin(req, env) {
   const j = (o, s) => new Response(JSON.stringify(o), { status: s || 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
   if (await loginBlocked(env, ip)) {
-    return j({ error: 'Too many attempts. Try again in ' + LOCK_MINUTES + ' minutes.' }, 429);
+    return j({ error: 'Too many failed attempts. This device is locked for 1 hour.' }, 429);
   }
   let body = {};
   try { body = await req.json(); } catch (e) { return j({ error: 'bad request' }, 400); }
+
+  // Slide-to-verify captcha. The login page only submits after the slider is
+  // completed; this rejects naive scripted posts that skip the UI. It is a
+  // speed bump, not strong bot protection — the per-IP lockout above is.
+  if (String(body.captcha || '') !== 'swiped') {
+    return j({ error: 'Please complete the slide-to-verify check.' }, 400);
+  }
 
   const user = String(body.user || '').trim();
   const pass = String(body.pass || '');
@@ -218,6 +225,15 @@ button:disabled{opacity:.6;cursor:default;transform:none}
   font-size:.83rem;margin-top:14px;display:none}
 .err.show{display:block}
 .foot{text-align:center;font-size:.72rem;color:var(--slate);margin-top:18px;line-height:1.5}
+.swipe{position:relative;height:46px;margin-top:6px;border-radius:11px;background:var(--g50);
+  border:1px solid var(--g200);overflow:hidden;user-select:none;touch-action:none}
+.swipe-fill{position:absolute;top:0;left:0;bottom:0;width:0;background:linear-gradient(135deg,#2EAFEA,var(--blue));border-radius:11px}
+.swipe-text{position:absolute;inset:0;display:grid;place-items:center;font-size:.8rem;font-weight:500;color:var(--slate);pointer-events:none}
+.swipe-handle{position:absolute;top:3px;left:3px;width:40px;height:38px;border-radius:8px;background:#fff;
+  box-shadow:0 2px 8px rgba(11,58,82,.25);display:grid;place-items:center;cursor:grab;font-size:1.35rem;line-height:1;color:var(--blue);font-weight:700}
+.swipe-handle:active{cursor:grabbing}
+.swipe.done .swipe-text{color:#fff}
+.swipe.done .swipe-handle{color:#fff;background:transparent;box-shadow:none;cursor:default}
 </style></head><body>
 <form class="box" id="f">
   <img class="logo" src="https://prohealth.us/assets/logo.png" alt="ProHealth">
@@ -227,17 +243,49 @@ button:disabled{opacity:.6;cursor:default;transform:none}
   <input id="u" autocomplete="username" autocapitalize="none" required autofocus>
   <label for="p">Password</label>
   <input id="p" type="password" autocomplete="current-password" required>
-  <button id="b" type="submit">Sign in</button>
+  <label for="sw">Verify</label>
+  <div class="swipe" id="sw">
+    <div class="swipe-fill" id="swfill"></div>
+    <div class="swipe-text" id="swtext">Slide to verify &rarr;</div>
+    <div class="swipe-handle" id="swh" role="slider" aria-label="Slide to verify" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">&#8250;</div>
+  </div>
+  <button id="b" type="submit" disabled>Sign in</button>
   <div class="err" id="e"></div>
   <p class="foot">This dashboard contains protected health information.<br>Do not share these credentials.</p>
 </form>
 <script>
 const f=document.getElementById('f'), e=document.getElementById('e'), b=document.getElementById('b');
+
+/* ---------- slide-to-verify captcha ---------- */
+let captchaOK=false;
+(function(){
+  const sw=document.getElementById('sw'), h=document.getElementById('swh'),
+        fill=document.getElementById('swfill'), txt=document.getElementById('swtext');
+  let dragging=false, grab=0;
+  const room=()=> sw.clientWidth - h.offsetWidth - 6;       // px of travel
+  function paint(x){ x=Math.max(0,Math.min(x,room())); h.style.transform='translateX('+x+'px)';
+    fill.style.width=(x+h.offsetWidth+3)+'px'; h.setAttribute('aria-valuenow',Math.round(x/room()*100)||0); return x; }
+  function verify(){ if(captchaOK)return; captchaOK=true; dragging=false; sw.classList.add('done');
+    paint(room()); txt.textContent='Verified ✓'; h.textContent='✓'; h.setAttribute('aria-valuenow',100);
+    b.disabled=false; }
+  h.addEventListener('pointerdown',(ev)=>{ if(captchaOK)return; dragging=true;
+    grab=ev.clientX - h.getBoundingClientRect().left; try{h.setPointerCapture(ev.pointerId);}catch(_){}} );
+  h.addEventListener('pointermove',(ev)=>{ if(!dragging||captchaOK)return;
+    const x=paint(ev.clientX - sw.getBoundingClientRect().left - grab); if(x>=room()-2) verify(); });
+  const release=()=>{ if(captchaOK||!dragging)return; dragging=false; paint(0); };  // snap back if incomplete
+  h.addEventListener('pointerup',release); h.addEventListener('pointercancel',release);
+  h.addEventListener('keydown',(ev)=>{ if(captchaOK)return;
+    if(ev.key==='Enter'||ev.key===' '||ev.key==='ArrowRight'){ ev.preventDefault(); verify(); } });
+})();
+
 f.addEventListener('submit', async (ev)=>{
-  ev.preventDefault(); e.classList.remove('show'); b.disabled=true; b.textContent='Signing in...';
+  ev.preventDefault();
+  if(!captchaOK){ e.textContent='Slide to verify first.'; e.classList.add('show'); return; }
+  e.classList.remove('show'); b.disabled=true; b.textContent='Signing in...';
   try{
     const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({user:document.getElementById('u').value,pass:document.getElementById('p').value})});
+      body:JSON.stringify({user:document.getElementById('u').value,pass:document.getElementById('p').value,
+        captcha:captchaOK?'swiped':''})});
     if(r.ok){ location.href='/admin'; return; }
     const d=await r.json().catch(()=>({}));
     e.textContent=d.error||'Sign in failed.'; e.classList.add('show');

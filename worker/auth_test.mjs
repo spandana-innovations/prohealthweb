@@ -18,7 +18,7 @@ const env={ DB:{prepare:mkStmt}, RESUMES:{put:async()=>{},get:async()=>null},
 globalThis.fetch=async()=>({ok:true,text:async()=>''});
 const P=(p,o={})=>new Request('https://api.prohealth.us'+p,o);
 const login=(u,pw,ip='1.1.1.1')=>worker.fetch(P('/admin/login',{method:'POST',
-  headers:{'Content-Type':'application/json','CF-Connecting-IP':ip},body:JSON.stringify({user:u,pass:pw})}),env);
+  headers:{'Content-Type':'application/json','CF-Connecting-IP':ip},body:JSON.stringify({user:u,pass:pw,captcha:'swiped'})}),env);
 
 const out=[]; const t=async(n,f)=>{try{out.push(((await f())?'PASS':'FAIL')+' | '+n);}catch(e){out.push('FAIL | '+n+' :: '+e.message);}};
 
@@ -64,8 +64,13 @@ await t('EXPIRED session is rejected', async()=>{
   const sig=Buffer.from(await crypto.subtle.sign('HMAC',key,enc.encode(payload))).toString('base64url');
   const r=await worker.fetch(P('/admin/api/all',{headers:{Cookie:'ph_session='+payload+'.'+sig}}),env);
   return r.status===401; });
-await t('rate limit: locks out after 8 failed attempts from one IP', async()=>{
-  for(let i=0;i<8;i++) await login('admin','nope','9.9.9.9');
+await t('captcha: login without the swipe token is rejected (400)', async()=>{
+  const r=await worker.fetch(P('/admin/login',{method:'POST',
+    headers:{'Content-Type':'application/json','CF-Connecting-IP':'6.6.6.6'},
+    body:JSON.stringify({user:'admin',pass:'admin@2026'})}),env);   // no captcha field
+  return r.status===400; });
+await t('rate limit: locks out after 3 failed attempts from one IP', async()=>{
+  for(let i=0;i<3;i++) await login('admin','nope','9.9.9.9');
   const r=await login('admin','admin@2026','9.9.9.9');   // even the RIGHT password
   return r.status===429; });
 await t('rate limit does not affect a different IP', async()=>
@@ -80,10 +85,21 @@ await t('PBKDF2 hashed password works (and plaintext then ignored)', async()=>{
   const env2={...env, ADMIN_PASS_HASH:`pbkdf2$100000$${salt}$${hash}`, ADMIN_PASS:'admin@2026',
               CONFIG:{get:async()=>null,put:async()=>{},delete:async()=>{}}};
   const ok=await worker.fetch(P('/admin/login',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'7.7.7.7'},
-    body:JSON.stringify({user:'admin',pass:'SuperSecret123!'})}),env2);
+    body:JSON.stringify({user:'admin',pass:'SuperSecret123!',captcha:'swiped'})}),env2);
   const old=await worker.fetch(P('/admin/login',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'7.7.7.8'},
-    body:JSON.stringify({user:'admin',pass:'admin@2026'})}),env2);
+    body:JSON.stringify({user:'admin',pass:'admin@2026',captcha:'swiped'})}),env2);
   return ok.status===200 && old.status===401; });
+await t('the committed wrangler.toml credential (admin / #Admin@2026) actually logs in', async()=>{
+  const toml=fs.readFileSync('./wrangler.toml','utf8');
+  const hash=(toml.match(/ADMIN_PASS_HASH\s*=\s*"([^"]+)"/)||[])[1];
+  if(!hash) return false;
+  const env3={...env, ADMIN_PASS_HASH:hash, ADMIN_PASS:undefined,
+    CONFIG:{get:async()=>null,put:async()=>{},delete:async()=>{}}};
+  const good=await worker.fetch(P('/admin/login',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'5.5.5.1'},
+    body:JSON.stringify({user:'admin',pass:'#Admin@2026',captcha:'swiped'})}),env3);
+  const bad=await worker.fetch(P('/admin/login',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'5.5.5.2'},
+    body:JSON.stringify({user:'admin',pass:'admin@2026',captcha:'swiped'})}),env3);
+  return good.status===200 && bad.status===401; });
 await t('public endpoints still work without login', async()=>
   (await worker.fetch(P('/health'),env)).status===200);
 await t('public POST /leads still works without login', async()=>

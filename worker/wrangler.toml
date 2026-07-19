@@ -25,13 +25,13 @@ id = "PASTE_ID_FROM__wrangler_kv_namespace_create_CONFIG"
 # ---------- ADMIN LOGIN ----------
 ADMIN_USER = "admin"
 
-# Works out of the box with the password below. It is stored here in PLAINTEXT,
-# which means anyone with repo access can read it.
-#   Upgrade (30 seconds):
-#     node hash-password.mjs "a long passphrase"
-#     wrangler secret put ADMIN_PASS_HASH      <- paste the output
-#   then DELETE the ADMIN_PASS line below and redeploy.
-ADMIN_PASS = "admin@2026"
+# Password is stored as a PBKDF2 hash (never plaintext), so the real password
+# is not readable from this repo. Generated with:
+#     node hash-password.mjs "<password>"
+# To change the password, regenerate the line below and redeploy.
+# (For maximum secrecy you can instead store this as a Cloudflare secret:
+#     wrangler secret put ADMIN_PASS_HASH   — then remove this line.)
+ADMIN_PASS_HASH = "pbkdf2$100000$06072772f236fd7a7bb9acccf2e7571e$2f41d650488f323ff522b8873b3ab12af84e21ad63bd456fd450b62d72f5c4ba"
 
 # Lets the website footer show "View dashboard" instead of "Staff login" once you
 # are signed in. Only works when the site and the API share a parent domain, so
