@@ -129,6 +129,29 @@ main{padding:18px;max-width:1180px;margin:0 auto}
 .btn.danger:hover{background:#a5301f;border-color:#a5301f}
 .btn.sm{padding:6px 11px;font-size:.76rem}
 .btn svg{width:14px;height:14px}
+/* admin accounts panel */
+.arow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 0;border-bottom:1px solid var(--line)}
+.arow:last-child{border-bottom:none}
+.ainfo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.ainfo b{font-family:var(--nav);font-size:.88rem;color:var(--navy);word-break:break-all}
+.aacts{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.atag{font-family:var(--nav);font-size:.63rem;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em}
+.atag.ok{background:var(--mint);color:var(--mint-ink)}
+.atag.pend{background:var(--butter);color:var(--butter-ink)}
+.atag.off{background:var(--g100);color:var(--slate)}
+.atag.own{background:var(--navy);color:#fff}
+.mini{font:inherit;font-family:var(--nav);font-weight:600;font-size:.74rem;padding:5px 10px;border-radius:8px;
+  border:1px solid var(--g200);background:#fff;color:var(--slate);cursor:pointer;transition:all .15s}
+.mini:hover{border-color:var(--blue);color:var(--blue-dark);background:var(--ice)}
+.mini.danger{color:var(--red-ink);border-color:#E6C4C0}
+.mini.danger:hover{background:var(--red);border-color:var(--red-ink)}
+.addbox{margin-top:16px;padding-top:16px;border-top:1px dashed var(--g200)}
+.addbox input{width:100%;font:inherit;font-size:.9rem;padding:10px 12px;border:1px solid var(--g200);border-radius:9px;background:var(--g50);margin-top:6px}
+.addbox input:focus{outline:2px solid var(--blue);border-color:var(--blue);background:#fff}
+.modes{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.rad{display:flex;align-items:center;gap:8px;font-family:var(--body);font-size:.83rem;font-weight:500;color:var(--ink);margin:0;cursor:pointer}
+.rad input{width:auto;margin:0}
+.warnbox{background:var(--butter);border:1px solid #E9D6A6;color:var(--butter-ink);padding:9px 12px;border-radius:9px;font-size:.8rem;margin-bottom:12px}
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:10px;
   transition:box-shadow .16s}
 .card:hover{box-shadow:var(--shadow-soft)}
@@ -629,7 +652,90 @@ async function renderSettings(){
     + '<div><label>Closes (Pacific)</label>' + f('c_close', c.HOURS_CLOSE || '17:00', '17:00') + '</div></div>'
     + '<label>Closure dates, one per line as YYYY-MM-DD = Reason</label>'
     + '<textarea id="c_hols" rows="6" placeholder="2026-11-26 = Thanksgiving Day">' + esc(c.HOLIDAYS_TEXT) + '</textarea>'
-    + '<button class="btn pri" style="margin-top:12px" onclick="saveCfg()">' + I.check + 'Save hours</button></div>';
+    + '<button class="btn pri" style="margin-top:12px" onclick="saveCfg()">' + I.check + 'Save hours</button></div>'
+    + (DATA.super ? adminsPanelHTML() : '');
+  if (DATA.super) loadAdmins();
+}
+
+/* ---------------- backend access (admin accounts) — owner only ---------------- */
+function adminsPanelHTML(){
+  return '<div class="panel cfg"><h2><span class="pi">' + I.lock + '</span>Backend access &mdash; admin accounts</h2>'
+    + '<p class="sub">People who can sign in to this dashboard with their own <b>@prohealth.us</b> email and password. '
+    + 'They can reset their own password from the sign-in page; you can also send a reset link or set one here.</p>'
+    + '<div id="adminWarn"></div>'
+    + '<div id="adminList"><div class="empty"><span class="spin"></span></div></div>'
+    + '<div class="addbox">'
+    + '<label>Add an admin (must be @prohealth.us)</label>'
+    + '<input id="na_email" type="email" placeholder="firstname@prohealth.us" autocapitalize="none">'
+    + '<div class="modes">'
+    + '<label class="rad"><input type="radio" name="namode" value="magic" checked onchange="naMode()"> Email a set-password link</label>'
+    + '<label class="rad"><input type="radio" name="namode" value="manual" onchange="naMode()"> Set a password now</label>'
+    + '<label class="rad"><input type="radio" name="namode" value="silent" onchange="naMode()"> Add without notifying</label>'
+    + '</div>'
+    + '<input id="na_pw" type="text" placeholder="Temporary password (min 10 chars)" style="display:none">'
+    + '<button class="btn pri" style="margin-top:12px" onclick="addAdmin()">' + I.check + 'Add admin</button>'
+    + '<div id="addMsg"></div></div></div>';
+}
+function naMode(){ const m = document.querySelector('input[name=namode]:checked').value;
+  $('na_pw').style.display = (m === 'manual') ? 'block' : 'none'; }
+async function loadAdmins(){
+  try{
+    const r = await api('/admins');
+    if (!r.emailConfigured) $('adminWarn').innerHTML =
+      '<div class="warnbox">Email is not configured yet (no RESEND_API_KEY), so links won\\'t actually send. '
+      + 'Use &ldquo;Set a password now&rdquo; until email is set up.</div>';
+    renderAdminList(r.admins || []);
+  }catch(e){ const el=$('adminList'); if(el) el.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+function renderAdminList(list){
+  const el = $('adminList'); if(!el) return;
+  if(!list.length){ el.innerHTML = '<p class="sub" style="margin:6px 0">No extra admins yet.</p>'; return; }
+  el.innerHTML = list.map(function(a){
+    const status = a.disabled ? '<span class="atag off">Disabled</span>'
+      : (a.hasPassword ? '<span class="atag ok">Active</span>' : '<span class="atag pend">No password yet</span>');
+    const owner = a.super ? '<span class="atag own">Owner</span>' : '';
+    const eem = esc(a.email), je = "'" + eem.replace(/'/g,"\\\\'") + "'";
+    return '<div class="arow"><div class="ainfo"><b>' + eem + '</b> ' + owner + status + '</div>'
+      + '<div class="aacts">'
+      + '<button class="mini" onclick="adminReset(' + je + ')">Send reset link</button>'
+      + '<button class="mini" onclick="adminSetPw(' + je + ')">Set password</button>'
+      + (a.super ? '' : '<button class="mini danger" onclick="adminRemove(' + je + ')">Remove</button>')
+      + '</div></div>';
+  }).join('');
+}
+async function addAdmin(){
+  const email = $('na_email').value.trim();
+  const mode = document.querySelector('input[name=namode]:checked').value;
+  const body = { email: email, mode: mode };
+  if (mode === 'manual') body.password = $('na_pw').value;
+  const t = $('addMsg');
+  try{
+    const r = await api('/admins', {method:'POST', body:JSON.stringify(body)});
+    let msg = 'Added ' + esc(r.email) + '.';
+    if (mode === 'magic') msg += r.sent ? ' A set-password link was emailed.' : ' (Email not configured — send a link or set a password manually.)';
+    if (mode === 'manual') msg += ' Password set — share it securely.';
+    t.innerHTML = '<div class="ok">' + msg + '</div>';
+    $('na_email').value=''; $('na_pw').value='';
+    loadAdmins();
+  }catch(e){ t.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+async function adminReset(email){
+  try{ const r = await api('/admins/reset', {method:'POST', body:JSON.stringify({email:email})});
+    alert(r.sent ? ('A reset link was emailed to ' + email + '.') : ('Email is not configured, so nothing was sent. Use “Set password” instead.'));
+  }catch(e){ alert(e.message); }
+}
+async function adminSetPw(email){
+  const pw = prompt('Set a new password for ' + email + ' (min 10 characters):');
+  if (pw === null) return;
+  if (pw.length < 10){ alert('Password must be at least 10 characters.'); return; }
+  try{ await api('/admins/set-password', {method:'POST', body:JSON.stringify({email:email, password:pw})});
+    alert('Password updated for ' + email + '. Share it securely.'); loadAdmins();
+  }catch(e){ alert(e.message); }
+}
+async function adminRemove(email){
+  if(!confirm('Remove backend access for ' + email + '?')) return;
+  try{ await api('/admins/' + encodeURIComponent(email), {method:'DELETE'}); loadAdmins();
+  }catch(e){ alert(e.message); }
 }
 async function saveCfg(){
   const g = function(id){ return $(id) ? $(id).value.trim() : undefined; };

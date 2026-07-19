@@ -18,7 +18,12 @@
    ============================================================ */
 
 import { ADMIN_HTML } from './admin.js';
-import { requireAdmin, handleLogin, handleLogout } from './auth.js';
+import {
+  requireAdmin, handleLogin, handleLogout, RESET_HTML,
+  isSuper, isProhealthEmail, SUPER_EMAILS,
+  getAdmins, getAdmin, upsertAdmin, removeAdmin, setAdminPassword,
+  createResetToken, readResetToken, deleteResetToken,
+} from './auth.js';
 
 const ALLOWED_ORIGINS = [
   'https://prohealth.us',
@@ -37,6 +42,8 @@ export default {
     try {
       if (p === '/admin/login' && req.method === 'POST') return await handleLogin(req, env);
       if (p === '/admin/logout') return handleLogout(env);
+      if (p === '/admin/forgot' && req.method === 'POST') return await handleForgot(req, env);
+      if (p === '/admin/reset') return await handleReset(req, env);
       if (p === '/admin' || p === '/admin/') {
         const who = await requireAdmin(req, env);
         if (who instanceof Response) return who;
@@ -298,7 +305,7 @@ async function adminApi(req, env, path, url, who) {
       env.DB.prepare('SELECT * FROM applications ORDER BY created_at DESC LIMIT 500').all(),
       env.DB.prepare('SELECT * FROM data_requests ORDER BY created_at DESC LIMIT 500').all(),
     ]);
-    return json({ user: who, leads: l.results || [], applications: a.results || [], data_requests: d.results || [] });
+    return json({ user: who, super: isSuper(who, env), leads: l.results || [], applications: a.results || [], data_requests: d.results || [] });
   }
 
   const m = path.match(/^\/(leads|applications|requests)\/([\w-]+)$/);
@@ -405,7 +412,136 @@ async function adminApi(req, env, path, url, who) {
     }
   }
 
+  /* ---------------- backend access: admin accounts (super-admins only) ---------------- */
+  if (path === '/admins' || path.indexOf('/admins/') === 0) {
+    if (!isSuper(who, env)) return json({ error: 'Only the owner can manage admin access.' }, {}, 403);
+    const origin = url.origin;
+
+    if (path === '/admins' && req.method === 'GET') {
+      const list = await getAdmins(env);
+      const view = list.map((a) => ({
+        email: a.email, hasPassword: !!a.passHash, disabled: !!a.disabled,
+        super: isSuper(a.email, env), createdAt: a.createdAt || '', createdBy: a.createdBy || '',
+      }));
+      // Always surface the hard-coded owner, even before it has a password.
+      const have = view.map((v) => v.email);
+      for (const s of SUPER_EMAILS) if (have.indexOf(s) === -1)
+        view.unshift({ email: s, hasPassword: false, disabled: false, super: true, createdAt: '', createdBy: '' });
+      return json({ admins: view, emailConfigured: !!env.RESEND_API_KEY, domain: 'prohealth.us' });
+    }
+
+    if (path === '/admins' && req.method === 'POST') {
+      const b = await req.json();
+      const email = String(b.email || '').trim().toLowerCase();
+      if (!isProhealthEmail(email)) return json({ error: 'Only @prohealth.us addresses can be added.' }, {}, 400);
+      const mode = b.mode || 'magic';   // 'magic' | 'manual' | 'silent'
+
+      if (mode === 'manual') {
+        const pass = String(b.password || '');
+        if (pass.length < 10) return json({ error: 'Password must be at least 10 characters.' }, {}, 400);
+        await setAdminPassword(env, email, pass);
+        await upsertAdmin(env, { email, createdBy: who });
+        await audit(env, who, 'add admin (password set)', email, '');
+        return json({ ok: true, email, sent: false });
+      }
+      if (!(await getAdmin(env, email))) await upsertAdmin(env, { email, createdBy: who, pending: true });
+      if (mode === 'silent') { await audit(env, who, 'add admin (no notify)', email, ''); return json({ ok: true, email, sent: false }); }
+
+      // magic: email a set-password link
+      const token = await createResetToken(env, email);
+      const cfg = await getConfig(env);
+      await sendEmail(env, cfg, email, 'Set up your ProHealth admin access',
+        '<p>You have been given access to the ProHealth admin dashboard.</p>' +
+        '<p><a href="' + origin + '/admin/reset?token=' + token + '">Set your password</a> ' +
+        '(valid for 1 hour), then sign in at ' + origin + '/admin with your email.</p>');
+      await audit(env, who, 'add admin (magic link)', email, '');
+      return json({ ok: true, email, sent: !!env.RESEND_API_KEY });
+    }
+
+    if (path === '/admins/reset' && req.method === 'POST') {
+      const b = await req.json();
+      const email = String(b.email || '').trim().toLowerCase();
+      if (!isProhealthEmail(email)) return json({ error: 'bad email' }, {}, 400);
+      if (!(await getAdmin(env, email)) && !isSuper(email, env)) return json({ error: 'not an admin' }, {}, 404);
+      const token = await createResetToken(env, email);
+      const cfg = await getConfig(env);
+      await sendEmail(env, cfg, email, 'Reset your ProHealth admin password',
+        '<p>A password reset was requested for your ProHealth admin account.</p>' +
+        '<p><a href="' + origin + '/admin/reset?token=' + token + '">Set a new password</a> (valid for 1 hour).</p>');
+      await audit(env, who, 'send reset link', email, '');
+      return json({ ok: true, sent: !!env.RESEND_API_KEY });
+    }
+
+    if (path === '/admins/set-password' && req.method === 'POST') {
+      const b = await req.json();
+      const email = String(b.email || '').trim().toLowerCase();
+      const pass = String(b.password || '');
+      if (!isProhealthEmail(email)) return json({ error: 'bad email' }, {}, 400);
+      if (pass.length < 10) return json({ error: 'Password must be at least 10 characters.' }, {}, 400);
+      await setAdminPassword(env, email, pass);
+      await audit(env, who, 'set admin password', email, '');
+      return json({ ok: true });
+    }
+
+    const rm = path.match(/^\/admins\/([^/]+)$/);
+    if (rm && req.method === 'DELETE') {
+      const email = decodeURIComponent(rm[1]).toLowerCase();
+      if (isSuper(email, env)) return json({ error: 'The owner account cannot be removed.' }, {}, 400);
+      await removeAdmin(env, email);
+      await audit(env, who, 'remove admin', email, '');
+      return json({ ok: true });
+    }
+  }
+
   return json({ error: 'not found' }, {}, 404);
+}
+
+async function handleForgot(req, env) {
+  // Light per-IP cap so this can't be used to flood an admin's inbox.
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  try {
+    const key = 'forgot:' + ip;
+    const n = parseInt((await env.CONFIG.get(key)) || '0', 10);
+    if (n >= 5) return json({ ok: true });         // silently drop; never reveal
+    await env.CONFIG.put(key, String(n + 1), { expirationTtl: 3600 });
+  } catch (e) { /* never block on a KV hiccup */ }
+
+  let b = {};
+  try { b = await req.json(); } catch (e) { /* fallthrough */ }
+  const email = String(b.email || '').trim().toLowerCase();
+  // Only act for real admins, but always return ok so we never reveal who exists.
+  if (isProhealthEmail(email) && ((await getAdmin(env, email)) || isSuper(email, env))) {
+    const token = await createResetToken(env, email);
+    const cfg = await getConfig(env);
+    await sendEmail(env, cfg, email, 'Reset your ProHealth admin password',
+      '<p>Someone requested a password reset for your ProHealth admin account.</p>' +
+      '<p><a href="' + new URL(req.url).origin + '/admin/reset?token=' + token + '">Set a new password</a> ' +
+      '(valid for 1 hour). If this wasn’t you, you can ignore this email.</p>');
+  }
+  return json({ ok: true });
+}
+
+async function handleReset(req, env) {
+  if (req.method === 'GET') {
+    return new Response(RESET_HTML, {
+      headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store',
+                 'X-Robots-Tag': 'noindex, nofollow', 'X-Frame-Options': 'DENY' },
+    });
+  }
+  if (req.method === 'POST') {
+    let b = {};
+    try { b = await req.json(); } catch (e) { return json({ error: 'bad request' }, {}, 400); }
+    const token = String(b.token || '');
+    const pass = String(b.password || '');
+    const email = await readResetToken(env, token);
+    if (!email) return json({ error: 'This link has expired. Ask for a new one.' }, {}, 400);
+    if (pass.length < 10) return json({ error: 'Password must be at least 10 characters.' }, {}, 400);
+    await setAdminPassword(env, email, pass);
+    await deleteResetToken(env, token);
+    await audit(env, email, 'password set via reset link', email, '');
+    return json({ ok: true });
+  }
+  return json({ error: 'method not allowed' }, {}, 405);
 }
 
 async function audit(env, who, action, target, detail) {

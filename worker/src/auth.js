@@ -65,6 +65,86 @@ async function checkPassword(env, pass) {
   return false;
 }
 
+/* ============================================================
+   Additional admins (email + password), stored in KV.
+
+   - Only @prohealth.us addresses may be added.
+   - daniel@prohealth.us is the hard-coded owner (super-admin) and can never
+     be removed. The built-in ADMIN_USER ("admin") is a super-admin too.
+   - Super-admins manage the roster; everyone signs in with email + password
+     and can reset their own password by email.
+   ============================================================ */
+export const ADMIN_DOMAIN = 'prohealth.us';
+export const SUPER_EMAILS = ['daniel@prohealth.us'];
+
+export function isProhealthEmail(email) {
+  return /^[^@\s]+@prohealth\.us$/i.test(String(email || '').trim());
+}
+export function isSuper(who, env) {
+  const w = String(who || '').toLowerCase();
+  if (w === String((env && env.ADMIN_USER) || 'admin').toLowerCase()) return true;
+  return SUPER_EMAILS.indexOf(w) !== -1;
+}
+
+export async function hashPassword(pass, iters = 100000) {
+  const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+  return 'pbkdf2$' + iters + '$' + salt + '$' + (await pbkdf2(pass, salt, iters));
+}
+export async function verifyPassword(stored, pass) {
+  if (!stored || stored.indexOf('pbkdf2$') !== 0) return false;
+  const [, iters, salt, want] = stored.split('$');
+  const got = await pbkdf2(pass, salt, parseInt(iters, 10) || 100000);
+  return safeEqual(got, want);
+}
+
+/* ---------- admin roster (KV key "admins") ---------- */
+export async function getAdmins(env) {
+  try { const a = JSON.parse((await env.CONFIG.get('admins')) || '[]'); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+}
+async function saveAdmins(env, list) { await env.CONFIG.put('admins', JSON.stringify(list)); }
+export async function getAdmin(env, email) {
+  email = String(email || '').toLowerCase();
+  return (await getAdmins(env)).find((a) => a.email === email) || null;
+}
+export async function upsertAdmin(env, obj) {
+  const list = await getAdmins(env);
+  const email = String(obj.email || '').toLowerCase();
+  const i = list.findIndex((a) => a.email === email);
+  if (i >= 0) list[i] = { ...list[i], ...obj, email };
+  else list.push({ email, createdAt: new Date().toISOString(), ...obj });
+  await saveAdmins(env, list);
+  return list;
+}
+export async function removeAdmin(env, email) {
+  email = String(email || '').toLowerCase();
+  const list = (await getAdmins(env)).filter((a) => a.email !== email);
+  await saveAdmins(env, list);
+  return list;
+}
+export async function setAdminPassword(env, email, pass) {
+  const passHash = await hashPassword(pass);
+  await upsertAdmin(env, { email: String(email).toLowerCase(), passHash, pending: false });
+}
+
+/* ---------- one-time reset / set-password tokens (KV, 1h TTL) ---------- */
+export async function createResetToken(env, email) {
+  const token = hex(crypto.getRandomValues(new Uint8Array(24)));
+  await env.CONFIG.put('reset:' + token,
+    JSON.stringify({ email: String(email).toLowerCase(), exp: Date.now() + 3600e3 }),
+    { expirationTtl: 3600 });
+  return token;
+}
+export async function readResetToken(env, token) {
+  if (!token) return null;
+  try {
+    const o = JSON.parse((await env.CONFIG.get('reset:' + token)) || 'null');
+    if (!o || !o.exp || o.exp < Date.now()) return null;
+    return o.email;
+  } catch (e) { return null; }
+}
+export async function deleteResetToken(env, token) { try { await env.CONFIG.delete('reset:' + token); } catch (e) {} }
+
 /* ---------- sessions ---------- */
 function sessionSecret(env) {
   return env.SESSION_SECRET || env.ADMIN_PASS_HASH || env.ADMIN_PASS || 'prohealth-dev-secret';
@@ -162,15 +242,27 @@ export async function handleLogin(req, env) {
 
   const user = String(body.user || '').trim();
   const pass = String(body.pass || '');
-  const okUser = safeEqual(user.toLowerCase(), String(env.ADMIN_USER || 'admin').toLowerCase());
-  const okPass = await checkPassword(env, pass);
 
-  if (!okUser || !okPass) {
+  // Two ways in: the built-in ADMIN_USER (username + ADMIN_PASS_HASH), or an
+  // added @prohealth.us admin (email + password stored in the KV roster).
+  let identity = null;
+  if (user.indexOf('@') === -1) {
+    if (safeEqual(user.toLowerCase(), String(env.ADMIN_USER || 'admin').toLowerCase()) && await checkPassword(env, pass)) {
+      identity = String(env.ADMIN_USER || 'admin');
+    }
+  } else {
+    const a = await getAdmin(env, user.toLowerCase());
+    if (a && !a.disabled && a.passHash && await verifyPassword(a.passHash, pass)) {
+      identity = user.toLowerCase();
+    }
+  }
+
+  if (!identity) {
     await noteFail(env, ip);
     return j({ error: 'Wrong username or password.' }, 401);
   }
   await clearFails(env, ip);
-  const token = await makeToken(user, env);
+  const token = await makeToken(identity, env);
   const h = new Headers({ 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
   h.append('Set-Cookie', 'ph_session=' + token + '; HttpOnly; Secure; SameSite=Strict; Path=/admin; Max-Age=' + SESSION_HOURS * 3600);
   // A UI hint only. Readable by the website so the footer can say "View dashboard"
@@ -224,6 +316,15 @@ button:disabled{opacity:.6;cursor:default;transform:none}
 .err{background:var(--red);border:1px solid #E9A0A0;color:var(--red-ink);padding:10px 12px;border-radius:9px;
   font-size:.83rem;margin-top:14px;display:none}
 .err.show{display:block}
+.ok{background:#E9F8F0;border:1px solid #A9DEC4;color:#2F7A63;padding:10px 12px;border-radius:9px;
+  font-size:.83rem;margin-top:14px;display:none}
+.ok.show{display:block}
+.forgot{text-align:center;margin-top:14px}
+.forgot a{font-family:"Outfit",sans-serif;font-size:.78rem;color:var(--blue-dark);text-decoration:none}
+.forgot a:hover{text-decoration:underline}
+.fpbox{display:none;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
+.fpbox.show{display:block}
+.fpbox button{box-shadow:none;background:var(--slate);margin-top:10px}
 .foot{text-align:center;font-size:.72rem;color:var(--slate);margin-top:18px;line-height:1.5}
 .swipe{position:relative;height:46px;margin-top:6px;border-radius:11px;background:var(--g50);
   border:1px solid var(--g200);overflow:hidden;user-select:none;touch-action:none}
@@ -239,7 +340,7 @@ button:disabled{opacity:.6;cursor:default;transform:none}
   <img class="logo" src="https://prohealth.us/assets/logo.png" alt="ProHealth">
   <h1>Admin sign in</h1>
   <p class="sub">Leads, applicants and data requests</p>
-  <label for="u">Username</label>
+  <label for="u">Username or email</label>
   <input id="u" autocomplete="username" autocapitalize="none" required autofocus>
   <label for="p">Password</label>
   <input id="p" type="password" autocomplete="current-password" required>
@@ -251,6 +352,13 @@ button:disabled{opacity:.6;cursor:default;transform:none}
   </div>
   <button id="b" type="submit" disabled>Sign in</button>
   <div class="err" id="e"></div>
+  <div class="ok" id="ok"></div>
+  <div class="forgot"><a href="#" id="fpl">Forgot password?</a></div>
+  <div id="fpbox" class="fpbox">
+    <label for="fpe">Your @prohealth.us email</label>
+    <input id="fpe" type="email" autocomplete="email" autocapitalize="none" placeholder="you@prohealth.us">
+    <button id="fpb" type="button">Email me a reset link</button>
+  </div>
   <p class="foot">This dashboard contains protected health information.<br>Do not share these credentials.</p>
 </form>
 <script>
@@ -291,5 +399,89 @@ f.addEventListener('submit', async (ev)=>{
     e.textContent=d.error||'Sign in failed.'; e.classList.add('show');
   }catch(err){ e.textContent='Network error. Try again.'; e.classList.add('show'); }
   b.disabled=false; b.textContent='Sign in';
+});
+
+/* ---------- forgot password ---------- */
+const ok=document.getElementById('ok'), fpl=document.getElementById('fpl'),
+      fpbox=document.getElementById('fpbox'), fpb=document.getElementById('fpb'), fpe=document.getElementById('fpe');
+fpl.addEventListener('click',(ev)=>{ ev.preventDefault(); fpbox.classList.toggle('show'); if(fpbox.classList.contains('show')) fpe.focus(); });
+fpb.addEventListener('click', async ()=>{
+  e.classList.remove('show'); ok.classList.remove('show'); fpb.disabled=true; fpb.textContent='Sending...';
+  try{
+    await fetch('/admin/forgot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:fpe.value})});
+    ok.textContent='If that address is an admin, a reset link is on its way. Check your inbox.'; ok.classList.add('show'); fpbox.classList.remove('show');
+  }catch(err){ e.textContent='Network error. Try again.'; e.classList.add('show'); }
+  fpb.disabled=false; fpb.textContent='Email me a reset link';
+});
+</script></body></html>`;
+
+/* ============================================================
+   Set / reset password page (served at GET /admin/reset?token=...)
+   The token is read from the URL by the page script and posted back with the
+   new password to POST /admin/reset.
+   ============================================================ */
+export const RESET_HTML = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Set your password | ProHealth Admin</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="https://prohealth.us/assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#138AC0;--blue-dark:#0F6A94;--navy:#0B3A52;--ice:#E9F6FC;--g50:#F8FAFB;--g200:#E4E9EF;
+--slate:#5D6E80;--ink:#0F2233;--line:#E1E8EF;--red:#FDECEC;--red-ink:#C0392B}
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;display:grid;place-items:center;padding:20px;font-family:"Inter",system-ui,sans-serif;
+  background:radial-gradient(900px 500px at 80% -10%,rgba(143,209,239,.5),transparent 60%),
+             linear-gradient(180deg,#FDFBF8,var(--ice));color:var(--ink)}
+.box{width:100%;max-width:380px;background:#fff;border:1px solid var(--line);border-radius:20px;
+  box-shadow:0 22px 60px rgba(11,58,82,.16);padding:30px 28px}
+.logo{display:block;height:38px;margin:0 auto 20px}
+h1{font-family:"Outfit",sans-serif;font-size:1.15rem;text-align:center;color:var(--navy);margin-bottom:4px}
+p.sub{text-align:center;font-size:.83rem;color:var(--slate);margin-bottom:22px}
+label{display:block;font-family:"Outfit",sans-serif;font-size:.76rem;font-weight:600;color:var(--slate);margin:12px 0 5px}
+input{width:100%;font:inherit;font-size:.95rem;padding:11px 13px;border:1px solid var(--g200);border-radius:10px;background:var(--g50)}
+input:focus{outline:2px solid var(--blue);border-color:var(--blue);background:#fff}
+button{width:100%;margin-top:18px;font-family:"Outfit",sans-serif;font-weight:600;font-size:.95rem;color:#fff;
+  background:linear-gradient(135deg,#2EAFEA,var(--blue) 60%,var(--blue-dark));border:none;border-radius:11px;
+  padding:13px;cursor:pointer;box-shadow:0 8px 20px rgba(19,138,192,.3)}
+button:disabled{opacity:.6;cursor:default}
+.err{background:var(--red);border:1px solid #E9A0A0;color:var(--red-ink);padding:10px 12px;border-radius:9px;font-size:.83rem;margin-top:14px;display:none}
+.err.show{display:block}
+.ok{background:#E9F8F0;border:1px solid #A9DEC4;color:#2F7A63;padding:12px;border-radius:9px;font-size:.86rem;margin-top:14px;display:none;text-align:center}
+.ok.show{display:block}
+.hint{font-size:.72rem;color:var(--slate);margin-top:6px}
+</style></head><body>
+<form class="box" id="f">
+  <img class="logo" src="https://prohealth.us/assets/logo.png" alt="ProHealth">
+  <h1>Set your password</h1>
+  <p class="sub">Choose a password for your ProHealth admin account</p>
+  <label for="p1">New password</label>
+  <input id="p1" type="password" autocomplete="new-password" required>
+  <p class="hint">At least 10 characters.</p>
+  <label for="p2">Confirm password</label>
+  <input id="p2" type="password" autocomplete="new-password" required>
+  <button id="b" type="submit">Save password</button>
+  <div class="err" id="e"></div>
+  <div class="ok" id="ok"></div>
+</form>
+<script>
+const q=new URLSearchParams(location.search), token=q.get('token')||'';
+const f=document.getElementById('f'), e=document.getElementById('e'), ok=document.getElementById('ok'), b=document.getElementById('b');
+if(!token){ e.textContent='This link is missing its token. Request a new one from the sign-in page.'; e.classList.add('show'); b.disabled=true; }
+f.addEventListener('submit', async (ev)=>{
+  ev.preventDefault(); e.classList.remove('show');
+  const p1=document.getElementById('p1').value, p2=document.getElementById('p2').value;
+  if(p1.length<10){ e.textContent='Password must be at least 10 characters.'; e.classList.add('show'); return; }
+  if(p1!==p2){ e.textContent='The two passwords do not match.'; e.classList.add('show'); return; }
+  b.disabled=true; b.textContent='Saving...';
+  try{
+    const r=await fetch('/admin/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token,password:p1})});
+    if(r.ok){ f.querySelectorAll('input,button,label,.hint').forEach(el=>el.style.display='none');
+      ok.innerHTML='Password saved. <a href="/admin">Sign in &rarr;</a>'; ok.classList.add('show'); return; }
+    const d=await r.json().catch(()=>({})); e.textContent=d.error||'Could not save.'; e.classList.add('show');
+  }catch(err){ e.textContent='Network error. Try again.'; e.classList.add('show'); }
+  b.disabled=false; b.textContent='Save password';
 });
 </script></body></html>`;

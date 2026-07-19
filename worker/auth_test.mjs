@@ -3,7 +3,7 @@ import fs from 'fs';
 const auth = fs.readFileSync('./src/auth.js','utf8');
 const idx  = fs.readFileSync('./src/index.js','utf8')
   .replace("import { ADMIN_HTML } from './admin.js';", "const ADMIN_HTML='<html>DASHBOARD</html>';")
-  .replace("import { requireAdmin, handleLogin, handleLogout } from './auth.js';", "");
+  .replace(/import\s*\{[\s\S]*?\}\s*from\s*'\.\/auth\.js';/, "");
 fs.writeFileSync('/tmp/_a.mjs', auth.replace(/^export /gm,'') + '\n' + idx);
 const { default: worker } = await import('/tmp/_a.mjs');
 
@@ -100,6 +100,58 @@ await t('the committed wrangler.toml credential (admin / #Admin@2026) actually l
   const bad=await worker.fetch(P('/admin/login',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'5.5.5.2'},
     body:JSON.stringify({user:'admin',pass:'admin@2026',captcha:'swiped'})}),env3);
   return good.status===200 && bad.status===401; });
+// ---------- multi-admin: email accounts, super-gating, reset flow ----------
+const admGet=(path,cookie=COOKIE)=>worker.fetch(P('/admin/api'+path,{headers:{Cookie:'ph_session='+cookie}}),env);
+const admPost=(path,body,cookie=COOKIE)=>worker.fetch(P('/admin/api'+path,{method:'POST',
+  headers:{'Content-Type':'application/json',Cookie:'ph_session='+cookie},body:JSON.stringify(body)}),env);
+const cookieOf=(r)=>((r.headers.get('Set-Cookie')||'').match(/ph_session=([^;]+)/)||[])[1]||'';
+const forgot=(email)=>worker.fetch(P('/admin/forgot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}),env);
+const doReset=(token,password)=>worker.fetch(P('/admin/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,password})}),env);
+const findToken=(email)=>{ for(const k of kv.keys()){ if(k.indexOf('reset:')===0){ try{ if(JSON.parse(kv.get(k)).email===email) return k.slice(6);}catch(e){} } } return null; };
+
+await t('admins roster requires login (401 signed out)', async()=>
+  (await worker.fetch(P('/admin/api/admins'),env)).status===401);
+await t('super-admin can list the roster; owner daniel@ is always present', async()=>{
+  const r=await admGet('/admins'); if(r.status!==200) return false; const d=await r.json();
+  return Array.isArray(d.admins) && d.admins.some(a=>a.email==='daniel@prohealth.us' && a.super); });
+await t('adding a non-@prohealth.us address is rejected (400)', async()=>
+  (await admPost('/admins',{email:'someone@gmail.com',mode:'silent'})).status===400);
+await t('adding a @prohealth.us admin with a manual password lets them sign in', async()=>{
+  const add=await admPost('/admins',{email:'nurse@prohealth.us',mode:'manual',password:'TempPass123!'});
+  if(add.status!==200) return false;
+  return (await login('nurse@prohealth.us','TempPass123!','20.0.0.1')).status===200; });
+await t('an added admin is NOT super (cannot manage the roster → 403)', async()=>{
+  const ck=cookieOf(await login('nurse@prohealth.us','TempPass123!','20.0.0.2'));
+  return (await admGet('/admins',ck)).status===403; });
+await t('wrong password for an email admin is rejected (401)', async()=>
+  (await login('nurse@prohealth.us','nope','20.0.0.3')).status===401);
+await t('forgot-password → reset token → new password works end to end', async()=>{
+  await admPost('/admins',{email:'aide@prohealth.us',mode:'silent'});
+  if((await forgot('aide@prohealth.us')).status!==200) return false;
+  const token=findToken('aide@prohealth.us'); if(!token) return false;
+  if((await doReset(token,'BrandNew99!')).status!==200) return false;
+  return (await login('aide@prohealth.us','BrandNew99!','20.0.0.4')).status===200; });
+await t('a used reset token cannot be replayed', async()=>{
+  await admPost('/admins',{email:'once@prohealth.us',mode:'silent'});
+  await forgot('once@prohealth.us'); const token=findToken('once@prohealth.us');
+  await doReset(token,'FirstUse123!');
+  return (await doReset(token,'SecondUse123!')).status===400; });
+await t('reset with a bogus token is rejected (400)', async()=>
+  (await doReset('deadbeef','Whatever123!')).status===400);
+await t('reset rejects a too-short password (400)', async()=>{
+  await admPost('/admins',{email:'shortpw@prohealth.us',mode:'silent'});
+  await forgot('shortpw@prohealth.us'); const token=findToken('shortpw@prohealth.us');
+  return (await doReset(token,'short')).status===400; });
+await t('forgot-password for a non-admin still returns ok (no user enumeration)', async()=>
+  (await forgot('stranger@prohealth.us')).status===200);
+await t('the owner account daniel@ cannot be removed (400)', async()=>
+  (await worker.fetch(P('/admin/api/admins/daniel@prohealth.us',{method:'DELETE',headers:{Cookie:'ph_session='+COOKIE}}),env)).status===400);
+await t('removing an added admin revokes their login', async()=>{
+  await admPost('/admins',{email:'temp@prohealth.us',mode:'manual',password:'TempPass123!'});
+  const del=await worker.fetch(P('/admin/api/admins/temp@prohealth.us',{method:'DELETE',headers:{Cookie:'ph_session='+COOKIE}}),env);
+  if(del.status!==200) return false;
+  return (await login('temp@prohealth.us','TempPass123!','20.0.0.5')).status===401; });
+
 await t('public endpoints still work without login', async()=>
   (await worker.fetch(P('/health'),env)).status===200);
 await t('public POST /leads still works without login', async()=>
