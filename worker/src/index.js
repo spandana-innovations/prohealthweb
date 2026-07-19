@@ -173,7 +173,7 @@ async function getConfig(env) {
   let saved = {};
   try { saved = JSON.parse((await env.CONFIG.get('config')) || '{}'); } catch (e) { saved = {}; }
   return {
-    EMAIL_FROM: saved.EMAIL_FROM || env.EMAIL_FROM || 'ProHealth Website <no-reply@prohealth.us>',
+    EMAIL_FROM: saved.EMAIL_FROM || env.EMAIL_FROM || 'ProHealth Home Care <no-reply@prohealth.us>',
     EMAIL_DEFAULT: saved.EMAIL_DEFAULT || env.EMAIL_DEFAULT || '',
     EMAIL_INTAKE: saved.EMAIL_INTAKE || env.EMAIL_INTAKE || '',
     EMAIL_HOSPICE: saved.EMAIL_HOSPICE || env.EMAIL_HOSPICE || '',

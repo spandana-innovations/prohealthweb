@@ -44,7 +44,7 @@ ADMIN_PASS_HASH = "pbkdf2$100000$06072772f236fd7a7bb9acccf2e7571e$2f41d650488f32
 
 # ---------- EMAIL ----------
 # Fallbacks only. Once you save Settings in the dashboard, KV wins over these.
-EMAIL_FROM    = "ProHealth Website <no-reply@prohealth.us>"
+EMAIL_FROM    = "ProHealth Home Care <no-reply@prohealth.us>"
 EMAIL_DEFAULT = "intake@prohealth.us"
 EMAIL_INTAKE  = "intake@prohealth.us"
 EMAIL_HOSPICE = "hospice@prohealth.us"
