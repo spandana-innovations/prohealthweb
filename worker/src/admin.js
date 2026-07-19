@@ -56,13 +56,22 @@ header img{height:30px;width:auto}
 /* small copyright, no footer bar */
 .copyr{text-align:center;font-size:.72rem;color:var(--slate);padding:16px 12px 28px}
 /* help wiki */
-.wiki{display:grid;grid-template-columns:244px 1fr;gap:18px;align-items:start}
-.wiki-side{position:sticky;top:74px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;max-height:calc(100vh - 96px);overflow:auto}
-.wiki-search{display:flex;align-items:center;gap:7px;background:var(--g50);border:1px solid var(--g200);border-radius:9px;padding:7px 10px;margin-bottom:8px}
-.wiki-search .wsi{display:inline-flex;color:var(--slate)}.wiki-search .wsi svg{width:15px;height:15px}
-.wiki-search input{border:none;outline:none;background:transparent;flex:1;font:inherit;font-size:.86rem}
-.wiki-cat{font-family:var(--nav);font-size:.63rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin:12px 4px 4px}
-.wiki-link{display:block;padding:7px 9px;border-radius:8px;font-size:.85rem;color:var(--ink);cursor:pointer;line-height:1.35}
+.wiki{display:grid;grid-template-columns:250px 1fr;gap:16px 18px;align-items:start}
+/* full-width, large search bar spanning both columns */
+.wiki-search{grid-column:1 / -1;display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--line);
+  border-radius:13px;padding:14px 18px;box-shadow:var(--shadow-soft)}
+.wiki-search:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(19,138,192,.14)}
+.wiki-search .wsi{display:inline-flex;color:var(--slate)}.wiki-search .wsi svg{width:20px;height:20px}
+.wiki-search input{border:none;outline:none;background:transparent;flex:1;font:inherit;font-size:1.02rem}
+.wiki-side{position:sticky;top:132px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;max-height:calc(100vh - 152px);overflow:auto}
+.wiki-cat{display:flex;align-items:center;gap:7px;font-family:var(--nav);font-size:.66rem;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--slate);margin:2px 0;padding:8px 8px;cursor:pointer;border-radius:8px;user-select:none}
+.wiki-cat:hover{background:var(--g50);color:var(--navy)}
+.wiki-cat .wcv{display:inline-flex;color:var(--g200);transition:transform .18s}.wiki-cat .wcv svg{width:13px;height:13px}
+.wiki-cat.open{color:var(--navy)}.wiki-cat.open .wcv{transform:rotate(90deg);color:var(--blue)}
+.wcn{margin-left:auto;font-size:.62rem;font-weight:700;background:var(--g100);color:var(--slate);border-radius:999px;padding:1px 8px}
+.wiki-cat-arts{padding:2px 0 6px 6px}.wiki-cat-arts[hidden]{display:none}
+.wiki-link{display:block;padding:7px 10px;border-radius:8px;font-size:.85rem;color:var(--ink);cursor:pointer;line-height:1.35}
 .wiki-link:hover{background:var(--ice)}
 .wiki-link.on{background:var(--blue);color:#fff;font-weight:600}
 .wiki-none{font-size:.83rem;color:var(--slate);padding:8px 4px}
@@ -1203,37 +1212,54 @@ const HELP_ARTICLES = [
   {id:'set-holidays', cat:'Configuration', title:'Holidays and closures', kw:'settings holidays closures federal observed weekend shift',
    body:'<ol><li>Open <b>Settings</b> and scroll to <b>Holidays &amp; office closures</b>.</li><li>Add a day, or click <b>Load US federal holidays</b> for a whole year.</li><li>If a holiday lands on a weekend, tap the amber button to shift it to the observed weekday.</li><li>Check the <b>Observed closures</b> list, then click <b>Save closures</b>.</li></ol>'},
 ];
-let WIKI_SEL = 'welcome';
+let WIKI_SEL = 'welcome', WIKI_OPEN = null;
+function artById(id){ return HELP_ARTICLES.filter(function(x){ return x.id===id; })[0]; }
+function catOf(id){ const a = artById(id); return a ? a.cat : HELP_CATS[0]; }
+function matchArt(a, q){ if(!q) return true; return (a.title + ' ' + a.kw + ' ' + a.body.replace(/<[^>]+>/g,' ')).toLowerCase().indexOf(q) > -1; }
 function renderHelp(){
+  if (!WIKI_OPEN) WIKI_OPEN = {}; WIKI_OPEN[catOf(WIKI_SEL)] = true;
   $('view').innerHTML = '<div class="wiki">'
-    + '<aside class="wiki-side"><div class="wiki-search"><span class="wsi">' + I.search + '</span>'
-    + '<input id="wikiq" placeholder="Search help" autocomplete="off" oninput="wikiSearch()"></div>'
-    + '<nav id="wikiIndex"></nav></aside>'
+    + '<div class="wiki-search"><span class="wsi">' + I.search + '</span>'
+    + '<input id="wikiq" placeholder="Search all help articles &mdash; titles and text" autocomplete="off" oninput="wikiSearch()"></div>'
+    + '<aside class="wiki-side"><nav id="wikiIndex"></nav></aside>'
     + '<section class="wiki-main" id="wikiMain"></section></div>';
+  setMain(artById(WIKI_SEL));
   paintWikiIndex('');
-  wikiOpen(WIKI_SEL);
 }
-function paintWikiIndex(q){
+function paintWikiIndex(qraw){
   const el = $('wikiIndex'); if(!el) return;
-  q = (q||'').toLowerCase().trim();
+  const q = (qraw||'').toLowerCase().trim();
   let html = '';
   HELP_CATS.forEach(function(cat){
-    const arts = HELP_ARTICLES.filter(function(a){ return a.cat===cat && (!q || (a.title+' '+a.kw).toLowerCase().indexOf(q)>-1); });
+    const arts = HELP_ARTICLES.filter(function(a){ return a.cat===cat && matchArt(a, q); });
     if(!arts.length) return;
-    html += '<div class="wiki-cat">' + esc(cat) + '</div>';
-    arts.forEach(function(a){ html += '<a class="wiki-link' + (a.id===WIKI_SEL?' on':'') + '" onclick="wikiOpen(\\'' + a.id + '\\')">' + esc(a.title) + '</a>'; });
+    const open = q ? true : !!WIKI_OPEN[cat];
+    html += '<div class="wiki-cat' + (open?' open':'') + '" onclick="wikiToggleCat(' + HELP_CATS.indexOf(cat) + ')">'
+      + '<span class="wcv">' + I.chev + '</span>' + esc(cat) + '<span class="wcn">' + arts.length + '</span></div>'
+      + '<div class="wiki-cat-arts"' + (open?'':' hidden') + '>'
+      + arts.map(function(a){ return '<a class="wiki-link' + (a.id===WIKI_SEL?' on':'') + '" onclick="wikiOpen(\\'' + a.id + '\\')">' + esc(a.title) + '</a>'; }).join('')
+      + '</div>';
   });
-  el.innerHTML = html || '<p class="wiki-none">No topics match &ldquo;' + esc(q) + '&rdquo;.</p>';
+  el.innerHTML = html || '<p class="wiki-none">No articles match &ldquo;' + esc(qraw) + '&rdquo;.</p>';
 }
+function setMain(a){
+  const main = $('wikiMain'); if(!main || !a) return;
+  main.innerHTML = '<div class="wiki-cat-tag">' + esc(a.cat) + '</div><h2>' + esc(a.title) + '</h2>' + a.body;
+  main.scrollTop = 0;
+}
+function wikiToggleCat(i){ const c = HELP_CATS[i]; WIKI_OPEN[c] = !WIKI_OPEN[c]; paintWikiIndex($('wikiq') ? $('wikiq').value : ''); }
 function wikiOpen(id){
-  const a = HELP_ARTICLES.filter(function(x){ return x.id===id; })[0]; if(!a) return;
-  WIKI_SEL = id;
-  const main = $('wikiMain');
-  if(main){ main.innerHTML = '<div class="wiki-cat-tag">' + esc(a.cat) + '</div><h2>' + esc(a.title) + '</h2>' + a.body;
-    main.scrollTop = 0; if (window.innerWidth <= 720) main.scrollIntoView({behavior:'smooth',block:'start'}); }
+  const a = artById(id); if(!a) return;
+  WIKI_SEL = id; WIKI_OPEN[a.cat] = true; setMain(a);
   paintWikiIndex($('wikiq') ? $('wikiq').value : '');
+  if (window.innerWidth <= 720) { const m = $('wikiMain'); if(m) m.scrollIntoView({behavior:'smooth',block:'start'}); }
 }
-function wikiSearch(){ paintWikiIndex($('wikiq').value); }
+function wikiSearch(){
+  const q = $('wikiq').value, ql = q.trim().toLowerCase();
+  if (ql) { const first = HELP_ARTICLES.filter(function(a){ return matchArt(a, ql); })[0];
+    if (first) { WIKI_SEL = first.id; setMain(first); } }
+  paintWikiIndex(q);
+}
 $('out').onclick = async function(){
   if (!confirm('Sign out of the ProHealth admin?')) return;
   await fetch('/admin/logout', {method:'POST'}).catch(function(){});
