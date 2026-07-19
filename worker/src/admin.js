@@ -41,6 +41,20 @@ header>*{position:relative;z-index:1}
 header img{height:30px;width:auto}
 .hbadge{font-family:var(--nav);font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);padding:3px 9px;border-radius:999px}
+.help{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);
+  color:#CFE4F3;cursor:pointer;display:grid;place-items:center;flex:none;padding:0;transition:all .15s}
+.help:hover{background:rgba(255,255,255,.24);color:#fff}
+.help svg{width:15px;height:15px}
+/* help document (in the modal) */
+.help-doc{padding:22px 26px;background:#fff;height:100%;overflow:auto;color:var(--ink)}
+.help-doc>*{max-width:760px;margin-left:auto;margin-right:auto}
+.help-lead{font-size:.95rem;color:var(--slate);line-height:1.6;margin-bottom:4px}
+.help-doc h3{font-family:var(--display);font-size:1.06rem;color:var(--navy);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--line)}
+.help-doc h3 svg{width:18px;height:18px;color:var(--blue);vertical-align:-3px;margin-right:5px}
+.help-doc p{font-size:.9rem;line-height:1.65;margin:6px 0}
+.help-doc ul{margin:6px 0;padding-left:20px}
+.help-doc li{font-size:.9rem;line-height:1.6;margin:5px 0}
+.help-foot{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);color:var(--slate);font-size:.85rem}
 header .sp{margin-left:auto;display:flex;align-items:center;gap:9px}
 .clock{font-family:var(--nav);display:inline-flex;flex-direction:column;align-items:flex-end;line-height:1.08;
   background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);padding:4px 11px;border-radius:10px;color:#fff}
@@ -307,6 +321,7 @@ a.tel:hover{text-decoration:underline}
 <header>
   <img src="${LOGO_DATA}" alt="ProHealth">
   <span class="hbadge">Admin</span>
+  <button class="help" id="help" title="How to use this dashboard" aria-label="Help"></button>
   <div class="sp">
     <span class="clock" id="clock" title="Current Pacific time"><b><span class="sdot" id="sdot"></span><span id="clockTx">--:--:--</span></b><span class="clbl" id="clbl">ProHealth PST Time</span></span>
     <span class="who" id="who"></span>
@@ -346,7 +361,8 @@ const I = {
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>',
-  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>'
 };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -369,7 +385,7 @@ let TAB = 'overview', DATA = {leads:[],applications:[],data_requests:[]}, C = {}
 let F = { leads:{status:'all',type:'all'}, contacts:{status:'all'}, callbacks:{status:'all'}, applications:{status:'all',role:'All',office:'All',resume:'all'}, requests:{status:'all',due:'all'} };
 function tabList(){
   const t = [['overview','Overview','home'],['leads','Leads','users'],['callbacks','Callbacks','phone'],['contacts','Contacts','mail'],
-             ['applications','Applicants','brief'],['requests','Data requests','lock'],['settings','Settings','cog']];
+             ['applications','Applicants','brief'],['openings','Openings','list'],['requests','Data requests','lock'],['settings','Settings','cog']];
   if (DATA.super) { t.push(['admins','Admins','users']); t.push(['audit','Activity','doc']); }
   return t;
 }
@@ -893,11 +909,9 @@ async function renderSettings(){
     + '<div class="row"><div><label>Opens (Pacific)</label><input type="time" id="c_open" value="' + esc(c.HOURS_OPEN || '08:30') + '"></div>'
     + '<div><label>Closes (Pacific)</label><input type="time" id="c_close" value="' + esc(c.HOURS_CLOSE || '17:00') + '"></div></div>'
     + '<button class="btn pri" style="margin-top:14px" onclick="saveCfg()">' + I.check + 'Save hours</button><div id="cfgok2"></div></div>'
-    + '<div id="holsHost"></div>'
-    + '<div id="opsHost"></div>';
+    + '<div id="holsHost"></div>';
   HOLS = parseHolsText(c.HOLIDAYS_TEXT);
   paintHols();
-  loadOpenings('opsHost');
 }
 
 /* ---------------- admins tab (owner only) ---------------- */
@@ -1009,9 +1023,6 @@ function naMode(){ const m = document.querySelector('input[name=namode]:checked'
 async function loadAdmins(){
   try{
     const r = await api('/admins');
-    if (!r.emailConfigured) $('adminWarn').innerHTML =
-      '<div class="warnbox">Email is not configured yet (no RESEND_API_KEY), so links won\\'t actually send. '
-      + 'Use &ldquo;Set a password now&rdquo; until email is set up.</div>';
     renderAdminList(r.admins || []);
   }catch(e){ const el=$('adminList'); if(el) el.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 }
@@ -1086,11 +1097,13 @@ async function saveCfg(){
 
 function render(){
   if (TAB === 'overview') return renderOverview();
+  if (TAB === 'openings') return renderOpenings();
   if (TAB === 'settings') return renderSettings();
   if (TAB === 'admins') return renderAdmins();
   if (TAB === 'audit') return renderAudit();
   renderList();   // leads, contacts, applications, requests
 }
+function renderOpenings(){ loadOpenings('view'); }
 async function pushContact(id, dest){
   try{
     if (dest === 'leads') await api('/leads/' + id, {method:'PATCH', body:JSON.stringify({type:'lead'})});
@@ -1109,11 +1122,74 @@ function openResume(key){
 }
 function closeModal(){ $('modal').hidden = true; $('modalBody').innerHTML = ''; document.body.style.overflow = ''; }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
+
+/* ---------------- help ---------------- */
+function openHelp(){
+  $('modalTitle').textContent = 'Help — using the ProHealth dashboard';
+  $('modalOpen').style.display = 'none';
+  $('modalBody').innerHTML = '<div class="help-doc">' + helpHTML() + '</div>';
+  $('modal').hidden = false; document.body.style.overflow = 'hidden';
+}
+function helpHTML(){
+  return ''
+  + '<p class="help-lead">This dashboard is where every enquiry from the ProHealth website lands — phone callbacks, contact messages, provider referrals, job applications and privacy requests. Nothing waits in an inbox: it all arrives here the moment someone hits submit. Here is how each part works.</p>'
+
+  + '<h3>' + I.clock + 'The top bar</h3>'
+  + '<ul>'
+  + '<li><b>The clock</b> shows the current Pacific time. Its dot is <b style="color:#2F7A63">green when the office is open</b> and <b style="color:#C0392B">red when closed</b> — when closed it also tells you how long until opening (e.g. &ldquo;opens in 2h 30m&rdquo;), based on your office hours and holiday closures.</li>'
+  + '<li><b>Your name</b> appears next to it, and the <b>sign-out</b> button is on the far right. You are signed out automatically after 8 hours.</li>'
+  + '</ul>'
+
+  + '<h3>' + I.home + 'Overview</h3>'
+  + '<p>Your landing page: how many new items need attention, anything overdue, and the latest activity. Click any stat to jump straight to that list.</p>'
+
+  + '<h3>' + I.users + 'Leads, ' + I.phone + 'Callbacks &amp; ' + I.mail + 'Contacts</h3>'
+  + '<p>Enquiries are split into three tabs so nothing gets lost:</p>'
+  + '<ul>'
+  + '<li><b>Leads</b> — general enquiries and provider referrals.</li>'
+  + '<li><b>Callbacks</b> — people who asked to be called back (from the chatbot or homepage).</li>'
+  + '<li><b>Contacts</b> — messages from the website contact form.</li>'
+  + '</ul>'
+  + '<p>Each card shows the name, phone (tap to call), email (tap to write) and message. On every card you can:</p>'
+  + '<ul>'
+  + '<li>Set a <b>status</b> — New → Contacted → Converted → Closed — from the dropdown. New items are highlighted.</li>'
+  + '<li>Type <b>notes</b> — they save automatically as you type.</li>'
+  + '<li><b>Search</b> the top box (name, phone, email) and <b>filter</b> by status. Use <b>CSV</b> to export what you are viewing.</li>'
+  + '</ul>'
+  + '<p><b>On a Contact</b>, two extra buttons let you <b>Push to Leads</b> (treat it as a lead) or <b>Push to Applicants</b> (if it turns out to be someone looking for a job).</p>'
+
+  + '<h3>' + I.brief + 'Applicants</h3>'
+  + '<p>Job applications, with role, office, licence and résumé. Click <b>Résumé</b> to preview the PDF right here in a pop-up — no download needed. Filter by role, office, or whether a résumé is attached.</p>'
+
+  + '<h3>' + I.lock + 'Data requests</h3>'
+  + '<p>Privacy requests (CCPA). Each shows a reference, the request type and a <b>due-by date</b> — overdue ones are flagged red. To action a deletion, open the card, click <b>Find their data</b> to see everything held on that person, then <b>Erase permanently</b>. The request itself is kept on purpose as your proof of compliance.</p>'
+
+  + '<h3>' + I.check + 'Editing, archiving &amp; deleting</h3>'
+  + '<p>Every record (in any list) has three actions at the bottom:</p>'
+  + '<ul>'
+  + '<li><b>Edit</b> — correct a name, phone, email or other details in a pop-up form.</li>'
+  + '<li><b>Archive</b> — tuck it away without deleting. Archived items are hidden until you pick the <b>Archived</b> status filter, where you can <b>Unarchive</b> them.</li>'
+  + '<li><b>Delete</b> — remove it permanently (asks you to confirm).</li>'
+  + '</ul>'
+
+  + '<h3>' + I.list + 'Openings</h3>'
+  + '<p>Manage the jobs shown on the careers page. Add a role, write a one-line summary, tick which offices it applies to, and toggle it on or off. Click <b>Save and publish</b> — the website updates within a minute, no developer needed.</p>'
+
+  + '<h3>' + I.cog + 'Settings</h3>'
+  + '<ul>'
+  + '<li><b>Where leads are emailed</b> — set which inbox each kind of enquiry is forwarded to. Leave one blank to use the default.</li>'
+  + '<li><b>Office hours</b> — set opening and closing times (Pacific). These drive the open/closed clock, the chatbot and the footer.</li>'
+  + '<li><b>Holidays &amp; closures</b> — add the days the office is closed. Use <b>Load US federal holidays</b> to fill a whole year at once. If a holiday lands on a weekend, tap the amber button to shift it to the observed weekday. The <b>Observed closures</b> list shows exactly which days you will be closed.</li>'
+  + '</ul>'
+
+  + '<p class="help-foot">Stuck on something not covered here? Call the office line and ask for whoever set this up.</p>';
+}
 $('out').onclick = async function(){
   if (!confirm('Sign out of the ProHealth admin?')) return;
   await fetch('/admin/logout', {method:'POST'}).catch(function(){});
   location.href = '/admin';
 };
+$('help').innerHTML = I.help; $('help').onclick = openHelp;
 /* ---- office-hours aware clock (green = open, red = closed + opens-in) ---- */
 const HRS = { open:'08:30', close:'17:00', hol:{} };
 async function loadHours(){
