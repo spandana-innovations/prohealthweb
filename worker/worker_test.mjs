@@ -215,6 +215,26 @@ await t('PUT /config merges: a holidays-only save keeps hours + email', async()=
   const b = await (await worker.fetch(P('/admin/api/config',{headers:ADMIN}), env)).json();
   return b.HOLIDAYS_TEXT.includes('Christmas') && b.HOURS_OPEN==='09:15' && b.EMAIL_HOSPICE==='hospice@prohealth.us'; });
 
+// --- security hardening ---
+await t('responses carry security headers (nosniff + HSTS)', async()=>{
+  const r = await worker.fetch(P('/health'), env);
+  return r.headers.get('X-Content-Type-Options')==='nosniff' && /max-age/.test(r.headers.get('Strict-Transport-Security')||''); });
+await t('admin page sets frame-ancestors CSP + X-Frame-Options', async()=>{
+  const r = await worker.fetch(P('/admin',{headers:ADMIN}), env);
+  return r.headers.get('X-Frame-Options')==='DENY' && /frame-ancestors 'none'/.test(r.headers.get('Content-Security-Policy')||''); });
+await t('public form endpoints are rate limited per IP', async()=>{
+  const ip='55.55.55.55'; let last;
+  for(let i=0;i<25;i++) last = await worker.fetch(P('/leads',{method:'POST',
+    headers:{'Content-Type':'application/json','CF-Connecting-IP':ip},body:JSON.stringify({name:'X',phone:'5'})}), env);
+  return last.status===429; });
+await t('roster labels roles: owner marleen@, superadmin daniel@', async()=>{
+  const b = await (await worker.fetch(P('/admin/api/admins',{headers:DANIEL}), env)).json();
+  const m = (b.admins||[]).find(a=>a.email==='marleen@prohealth.us');
+  const d = (b.admins||[]).find(a=>a.email==='daniel@prohealth.us');
+  return m && m.role==='Owner' && d && d.role==='Superadmin'; });
+await t('the owner marleen@ cannot be removed', async()=>
+  (await worker.fetch(P('/admin/api/admins/marleen@prohealth.us',{method:'DELETE',headers:DANIEL}), env)).status===400);
+
 out.forEach(l=>console.log('  '+l));
 console.log('\n'+out.filter(x=>x.startsWith('PASS')).length+'/'+out.length+' passed');
 process.exit(out.some(x=>x.startsWith('FAIL'))?1:0);

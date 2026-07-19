@@ -145,6 +145,12 @@ main{padding:18px;max-width:1180px;margin:0 auto}
 .atag.pend{background:var(--butter);color:var(--butter-ink)}
 .atag.off{background:var(--g100);color:var(--slate)}
 .atag.own{background:var(--navy);color:#fff}
+.atag.role{background:var(--ice);color:var(--blue-dark)}
+.aemail{font-size:.76rem;color:var(--slate)}
+.nafield{display:flex;align-items:stretch;margin-top:6px;border:1px solid var(--g200);border-radius:9px;background:var(--g50);overflow:hidden}
+.nafield:focus-within{outline:2px solid var(--blue);border-color:var(--blue)}
+.nafield input{border:none;outline:none;background:transparent;flex:1;font:inherit;font-size:.9rem;padding:10px 12px;margin:0}
+.nasuffix{display:flex;align-items:center;padding:0 12px;background:var(--g100);color:var(--slate);font-family:var(--nav);font-size:.85rem;font-weight:600;border-left:1px solid var(--g200)}
 .mini{font:inherit;font-family:var(--nav);font-weight:600;font-size:.74rem;padding:5px 10px;border-radius:8px;
   border:1px solid var(--g200);background:#fff;color:var(--slate);cursor:pointer;transition:all .15s}
 .mini:hover{border-color:var(--blue);color:var(--blue-dark);background:var(--ice)}
@@ -987,8 +993,8 @@ function adminsPanelHTML(){
     + '<div id="adminWarn"></div>'
     + '<div id="adminList"><div class="empty"><span class="spin"></span></div></div>'
     + '<div class="addbox">'
-    + '<label>Add an admin (must be @prohealth.us)</label>'
-    + '<input id="na_email" type="email" placeholder="firstname@prohealth.us" autocapitalize="none">'
+    + '<label>Add an admin &mdash; enter the first name only</label>'
+    + '<div class="nafield"><input id="na_name" type="text" placeholder="firstname" autocapitalize="none" autocomplete="off" onkeydown="if(event.key===\\'Enter\\'){event.preventDefault();addAdmin()}"><span class="nasuffix">@prohealth.us</span></div>'
     + '<div class="modes">'
     + '<label class="rad"><input type="radio" name="namode" value="magic" checked onchange="naMode()"> Email a set-password link</label>'
     + '<label class="rad"><input type="radio" name="namode" value="manual" onchange="naMode()"> Set a password now</label>'
@@ -1009,15 +1015,16 @@ async function loadAdmins(){
     renderAdminList(r.admins || []);
   }catch(e){ const el=$('adminList'); if(el) el.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 }
+function firstNameOf(email){ const p = String(email||'').split('@')[0]; return p ? p.charAt(0).toUpperCase() + p.slice(1) : String(email||''); }
 function renderAdminList(list){
   const el = $('adminList'); if(!el) return;
   if(!list.length){ el.innerHTML = '<p class="sub" style="margin:6px 0">No extra admins yet.</p>'; return; }
   el.innerHTML = list.map(function(a){
     const status = a.disabled ? '<span class="atag off">Disabled</span>'
       : (a.hasPassword ? '<span class="atag ok">Active</span>' : '<span class="atag pend">No password yet</span>');
-    const owner = a.super ? '<span class="atag own">Owner</span>' : '';
+    const role = a.role ? '<span class="atag ' + (a.super ? 'own' : 'role') + '">' + esc(a.role) + '</span>' : '';
     const eem = esc(a.email), je = "'" + eem.replace(/'/g,"\\\\'") + "'";
-    return '<div class="arow"><div class="ainfo"><b>' + eem + '</b> ' + owner + status + '</div>'
+    return '<div class="arow"><div class="ainfo"><b>' + esc(firstNameOf(a.email)) + '</b><span class="aemail">' + eem + '</span> ' + role + status + '</div>'
       + '<div class="aacts">'
       + '<button class="mini" onclick="adminReset(' + je + ')">Send reset link</button>'
       + '<button class="mini" onclick="adminSetPw(' + je + ')">Set password</button>'
@@ -1026,18 +1033,22 @@ function renderAdminList(list){
   }).join('');
 }
 async function addAdmin(){
-  const email = $('na_email').value.trim();
+  const t = $('addMsg');
+  const name = $('na_name').value.trim().toLowerCase();
+  if (!/^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$/.test(name)) {
+    t.innerHTML = '<div class="err">Enter a valid first name (letters and numbers, no @ or spaces).</div>'; return;
+  }
+  const email = name + '@prohealth.us';
   const mode = document.querySelector('input[name=namode]:checked').value;
   const body = { email: email, mode: mode };
   if (mode === 'manual') body.password = $('na_pw').value;
-  const t = $('addMsg');
   try{
     const r = await api('/admins', {method:'POST', body:JSON.stringify(body)});
-    let msg = 'Added ' + esc(r.email) + '.';
+    let msg = 'Added ' + esc(firstNameOf(r.email)) + ' (' + esc(r.email) + ').';
     if (mode === 'magic') msg += r.sent ? ' A set-password link was emailed.' : ' (Email not configured — send a link or set a password manually.)';
     if (mode === 'manual') msg += ' Password set — share it securely.';
     t.innerHTML = '<div class="ok">' + msg + '</div>';
-    $('na_email').value=''; $('na_pw').value='';
+    $('na_name').value=''; $('na_pw').value='';
     loadAdmins();
   }catch(e){ t.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 }

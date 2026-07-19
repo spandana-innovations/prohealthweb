@@ -20,7 +20,7 @@
 import { ADMIN_HTML } from './admin.js';
 import {
   requireAdmin, handleLogin, handleLogout, RESET_HTML,
-  isSuper, isProhealthEmail, SUPER_EMAILS,
+  isSuper, isProhealthEmail, isLocalName, roleOf, SUPER_EMAILS,
   getAdmins, getAdmin, upsertAdmin, removeAdmin, setAdminPassword,
   createResetToken, readResetToken, deleteResetToken,
 } from './auth.js';
@@ -49,10 +49,7 @@ export default {
       if (p === '/admin' || p === '/admin/') {
         const who = await requireAdmin(req, env);
         if (who instanceof Response) return who;
-        return new Response(ADMIN_HTML, {
-          headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store',
-                     'X-Robots-Tag': 'noindex, nofollow', 'X-Frame-Options': 'DENY' },
-        });
+        return new Response(ADMIN_HTML, { headers: htmlHeaders() });
       }
       if (p.startsWith('/admin/api/')) {
         const who = await requireAdmin(req, env);
@@ -117,6 +114,21 @@ async function readOpenings(env) {
 }
 
 /* ---------------- helpers ---------------- */
+// Cheap, always-on security headers (no runtime cost, no extra requests).
+const SECHEAD = {
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+};
+// Headers for HTML pages served by the Worker (admin, login, reset).
+// The CSP restricts only framing, plugins and <base> injection — it does not
+// constrain script/style/img sources, so it cannot break the pages.
+const HTML_CSP = "frame-ancestors 'none'; object-src 'none'; base-uri 'none'";
+function htmlHeaders(extra) {
+  return Object.assign({ 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store',
+    'X-Robots-Tag': 'noindex, nofollow', 'X-Frame-Options': 'DENY', 'Content-Security-Policy': HTML_CSP },
+    SECHEAD, extra || {});
+}
 function corsHeaders(origin) {
   const ok = ALLOWED_ORIGINS.includes(origin);
   return {
@@ -126,7 +138,18 @@ function corsHeaders(origin) {
   };
 }
 const json = (o, cors = {}, status = 200) =>
-  new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...cors } });
+  new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...SECHEAD, ...cors } });
+
+// Per-IP throttle for unauthenticated endpoints. One KV read + write; fast.
+async function tooMany(env, ip, bucket, max, ttl) {
+  try {
+    const key = 'rl:' + bucket + ':' + ip;
+    const n = parseInt((await env.CONFIG.get(key)) || '0', 10);
+    if (n >= max) return true;
+    await env.CONFIG.put(key, String(n + 1), { expirationTtl: ttl });
+    return false;
+  } catch (e) { return false; }   // never block a real user on a KV hiccup
+}
 
 const esc = (s = '') =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -249,6 +272,8 @@ async function sendAck(env, cfg, to, subject, html) {
 
 /* ---------------- POST /leads ---------------- */
 async function handleLead(req, env, cors) {
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  if (await tooMany(env, ip, 'form', 20, 600)) return json({ error: 'Too many submissions. Please try again in a few minutes.' }, cors, 429);
   const d = await req.json();
   if (!clean(d.name) || !clean(d.phone)) return json({ error: 'name and phone required' }, cors, 400);
   const cfg = await getConfig(env);
@@ -286,6 +311,8 @@ async function handleLead(req, env, cors) {
 
 /* ---------------- POST /applications ---------------- */
 async function handleApplication(req, env, cors) {
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  if (await tooMany(env, ip, 'form', 20, 600)) return json({ error: 'Too many submissions. Please try again in a few minutes.' }, cors, 429);
   const form = await req.formData();
   const name = clean(form.get('name'), 120), phone = clean(form.get('phone'), 40);
   if (!name || !phone) return json({ error: 'name and phone required' }, cors, 400);
@@ -333,6 +360,8 @@ async function handleApplication(req, env, cors) {
 
 /* ---------------- POST /data-requests ---------------- */
 async function handleDataRequest(req, env, cors) {
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  if (await tooMany(env, ip, 'form', 20, 600)) return json({ error: 'Too many submissions. Please try again in a few minutes.' }, cors, 429);
   const d = await req.json();
   if (!clean(d.name) || !clean(d.email)) return json({ error: 'name and email required' }, cors, 400);
   const cfg = await getConfig(env);
@@ -539,12 +568,12 @@ async function adminApi(req, env, path, url, who) {
       const list = await getAdmins(env);
       const view = list.map((a) => ({
         email: a.email, hasPassword: !!a.passHash, disabled: !!a.disabled,
-        super: isSuper(a.email, env), createdAt: a.createdAt || '', createdBy: a.createdBy || '',
+        super: isSuper(a.email, env), role: roleOf(a.email, env), createdAt: a.createdAt || '', createdBy: a.createdBy || '',
       }));
-      // Always surface the hard-coded owner, even before it has a password.
+      // Always surface the protected owner/super accounts, even before they have a password.
       const have = view.map((v) => v.email);
       for (const s of SUPER_EMAILS) if (have.indexOf(s) === -1)
-        view.unshift({ email: s, hasPassword: false, disabled: false, super: true, createdAt: '', createdBy: '' });
+        view.unshift({ email: s, hasPassword: false, disabled: false, super: true, role: roleOf(s, env), createdAt: '', createdBy: '' });
       return json({ admins: view, emailConfigured: !!env.RESEND_API_KEY, domain: 'prohealth.us' });
     }
 
@@ -641,10 +670,7 @@ async function handleForgot(req, env) {
 
 async function handleReset(req, env) {
   if (req.method === 'GET') {
-    return new Response(RESET_HTML, {
-      headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store',
-                 'X-Robots-Tag': 'noindex, nofollow', 'X-Frame-Options': 'DENY' },
-    });
+    return new Response(RESET_HTML, { headers: htmlHeaders() });
   }
   if (req.method === 'POST') {
     let b = {};

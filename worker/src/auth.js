@@ -75,15 +75,29 @@ async function checkPassword(env, pass) {
      and can reset their own password by email.
    ============================================================ */
 export const ADMIN_DOMAIN = 'prohealth.us';
-export const SUPER_EMAILS = ['daniel@prohealth.us'];
+// The owner and the super-admin(s). They have identical permissions; the only
+// difference is the label shown in the UI. All are protected (cannot be removed).
+export const OWNER_EMAIL = 'marleen@prohealth.us';
+export const SUPER_EMAILS = ['marleen@prohealth.us', 'daniel@prohealth.us'];
 
 export function isProhealthEmail(email) {
   return /^[^@\s]+@prohealth\.us$/i.test(String(email || '').trim());
+}
+// local part before @prohealth.us: letters, digits, dot, underscore, hyphen
+export function isLocalName(name) {
+  return /^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$/i.test(String(name || '').trim());
 }
 export function isSuper(who, env) {
   const w = String(who || '').toLowerCase();
   if (w === String((env && env.ADMIN_USER) || 'admin').toLowerCase()) return true;
   return SUPER_EMAILS.indexOf(w) !== -1;
+}
+export function roleOf(email, env) {
+  const e = String(email || '').toLowerCase();
+  if (e === OWNER_EMAIL) return 'Owner';
+  if (SUPER_EMAILS.indexOf(e) !== -1) return 'Superadmin';
+  if (e === String((env && env.ADMIN_USER) || 'admin').toLowerCase()) return 'Admin';
+  return 'Admin';
 }
 
 export async function hashPassword(pass, iters = 100000) {
@@ -219,7 +233,10 @@ export async function requireAdmin(req, env) {
   return new Response(LOGIN_HTML, {
     status: 200,   // it is a page, not an API error; /admin/api/* still returns 401
     headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store',
-               'X-Robots-Tag': 'noindex, nofollow', 'X-Frame-Options': 'DENY' },
+               'X-Robots-Tag': 'noindex, nofollow', 'X-Frame-Options': 'DENY',
+               'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin',
+               'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+               'Content-Security-Policy': "frame-ancestors 'none'; object-src 'none'; base-uri 'none'" },
   });
 }
 
