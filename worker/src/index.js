@@ -222,8 +222,7 @@ function ackShell(headline, intro, rows, closing) {
     '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E1E8EF">' +
     // header
     '<tr><td style="background:#0B3A52;background:linear-gradient(135deg,#0B3A52,#138AC0);padding:22px 28px">' +
-    '<img src="https://prohealth.us/assets/logo-white.png" alt="ProHealth Home Care" height="26" style="height:26px;display:block">' +
-    '<div style="color:#CFE9F6;font:600 12px Arial,sans-serif;letter-spacing:.5px;margin-top:6px">PROHEALTH HOME CARE</div></td></tr>' +
+    '<img src="https://prohealth.us/assets/logo-white.png" alt="ProHealth Home Care" height="30" style="height:30px;display:block"></td></tr>' +
     // body
     '<tr><td style="padding:28px">' +
     '<h1 style="margin:0 0 10px;color:#0B3A52;font:700 21px Arial,sans-serif">' + esc(headline) + '</h1>' +
