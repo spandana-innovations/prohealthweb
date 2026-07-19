@@ -1,0 +1,27 @@
+{
+  "_comment": "EDIT THIS FILE to change what appears on /careers/. Set active:false to hide a role without deleting it. Then run ./deploy.sh",
+  "updated": "2026-07-16",
+  "openings": [
+    { "title": "Registered Nurse (RN)", "type": "Full-time", "active": true,
+      "summary": "Home Health and Hospice case management. Flexible schedule, local territory.",
+      "offices": ["Sacramento", "Walnut Creek", "San Jose", "Stockton", "Monterey", "Fresno"] },
+    { "title": "Licensed Vocational Nurse (LVN)", "type": "Full-time", "active": true,
+      "summary": "Skilled visits, wound care and medication management in patients' homes.",
+      "offices": ["Sacramento", "Stockton", "Fresno"] },
+    { "title": "Physical Therapist (PT)", "type": "Full-time", "active": true,
+      "summary": "Home-based rehab. Our PTs hold master's and doctorate degrees.",
+      "offices": ["Walnut Creek", "San Jose", "Stockton"] },
+    { "title": "Occupational Therapist (OT)", "type": "Part-time", "active": true,
+      "summary": "Restore independence in daily living, with home-safety evaluations.",
+      "offices": ["Sacramento", "San Jose"] },
+    { "title": "Speech Language Pathologist (SLP)", "type": "Per-diem", "active": true,
+      "summary": "Swallowing and speech evaluation and treatment, per-diem across the region.",
+      "offices": ["Sacramento", "Fresno"] },
+    { "title": "Home Health Aide (HHA) / Caregiver", "type": "Flexible", "active": true,
+      "summary": "Personal care and companionship, from a few hours a day to 24-hour care.",
+      "offices": ["Sacramento", "Walnut Creek", "San Jose", "Stockton", "Monterey", "Fresno"] },
+    { "title": "Medical Social Worker (MSW)", "type": "Part-time", "active": true,
+      "summary": "Counselling, planning and community resource navigation for patients and families.",
+      "offices": ["Sacramento", "San Jose"] }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "prohealth-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ProHealth Home Care marketing site + Cloudflare Worker backend",
+  "scripts": {
+    "build": "python3 build.py",
+    "serve": "python3 -m http.server -d site 8000",
+    "test": "npm run test:site && npm run test:worker",
+    "test:site": "node src/mega_test.js && node src/review_test.js",
+    "test:worker": "node worker/worker_test.mjs && node worker/auth_test.mjs",
+    "deploy": "./deploy.sh",
+    "deploy:backend": "cd worker && ./setup.sh"
+  }
+}

@@ -1,0 +1,13 @@
+/volunteer/            /home-care/     301
+/volunteer-2/          /volunteer/     301
+/coverage/             /locations/     301
+/coverage              /locations/     301
+/index.php             /               301
+/home/                 /               301
+/wp-admin/*            /               301
+/wp-login.php          /               301
+/feed/                 /               301
+/comments/feed/        /               301
+/xmlrpc.php            /               301
+# NEVER use a query string in the source (e.g. /?page_id=*): Cloudflare parses
+# the path only, making it "/" -> "/", an infinite loop on the homepage.

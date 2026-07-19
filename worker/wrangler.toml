@@ -1,0 +1,61 @@
+name = "prohealth-api"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# Uncomment AFTER prohealth.us is active on Cloudflare.
+# Until then the Worker runs at https://prohealth-api.<your-subdomain>.workers.dev
+# routes = [
+#   { pattern = "api.prohealth.us", custom_domain = true }
+# ]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "prohealth-leads"
+database_id = "PASTE_ID_FROM__wrangler_d1_create"
+
+[[r2_buckets]]
+binding = "RESUMES"
+bucket_name = "prohealth-resumes"
+
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "PASTE_ID_FROM__wrangler_kv_namespace_create_CONFIG"
+
+[vars]
+# ---------- ADMIN LOGIN ----------
+ADMIN_USER = "admin"
+
+# Works out of the box with the password below. It is stored here in PLAINTEXT,
+# which means anyone with repo access can read it.
+#   Upgrade (30 seconds):
+#     node hash-password.mjs "a long passphrase"
+#     wrangler secret put ADMIN_PASS_HASH      <- paste the output
+#   then DELETE the ADMIN_PASS line below and redeploy.
+ADMIN_PASS = "admin@2026"
+
+# Lets the website footer show "View dashboard" instead of "Staff login" once you
+# are signed in. Only works when the site and the API share a parent domain, so
+# set it after you move to prohealth.us. Leave blank on *.workers.dev.
+# COOKIE_DOMAIN = ".prohealth.us"
+
+# Signs session cookies. Generate one and store it as a secret:
+#   wrangler secret put SESSION_SECRET
+# (openssl rand -hex 32)
+
+# ---------- EMAIL ----------
+# Fallbacks only. Once you save Settings in the dashboard, KV wins over these.
+EMAIL_FROM    = "ProHealth Website <no-reply@prohealth.us>"
+EMAIL_DEFAULT = "intake@prohealth.us"
+EMAIL_INTAKE  = "intake@prohealth.us"
+EMAIL_HOSPICE = "hospice@prohealth.us"
+EMAIL_CAREERS = "hr@prohealth.us"
+EMAIL_PRIVACY = "privacy@prohealth.us"
+
+# Extra allowlist on top of Cloudflare Access. Comma separated. Leave blank to
+# allow anyone Access itself lets through.
+ADMIN_EMAILS  = ""
+
+# NEVER set this to "1" in production: it disables admin authentication.
+# DEV_BYPASS = "1"
+
+# Secret (never in this file):  wrangler secret put RESEND_API_KEY

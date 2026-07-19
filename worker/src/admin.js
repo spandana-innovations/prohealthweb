@@ -1,0 +1,649 @@
+import { LOGO_DATA, ICON_DATA } from './admin-assets.js';
+
+export const ADMIN_HTML = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ProHealth Admin</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="${ICON_DATA}">
+<meta name="theme-color" content="#0B3A52">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#138AC0;--blue-dark:#0F6A94;--blue-lt:#2EAFEA;--navy:#0B3A52;--navy-2:#114E6B;--sky:#8FD1EF;
+  --ice:#E9F6FC;--ice-2:#F4FBFE;
+  --g50:#F8FAFB;--g100:#F1F4F7;--g200:#E4E9EF;--slate:#5D6E80;--ink:#0F2233;--line:#E1E8EF;
+  --mint:#E4F5EE;--mint-ink:#2F7A63;--peach:#FDEEE4;--peach-ink:#B0663C;
+  --lilac:#EEEBFA;--lilac-ink:#5B4FA3;--butter:#FDF4DF;--butter-ink:#96702A;
+  --red:#FDECEC;--red-ink:#C0392B;
+  --display:"Bricolage Grotesque","Outfit",system-ui,sans-serif;
+  --nav:"Outfit",system-ui,sans-serif;--body:"Inter",system-ui,sans-serif;
+  --shadow-soft:0 6px 20px rgba(11,58,82,.08);
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--body);background:var(--g50);color:var(--ink);-webkit-font-smoothing:antialiased;
+  padding-bottom:calc(24px + env(safe-area-inset-bottom));line-height:1.6}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:6px}
+a{color:var(--blue-dark)}
+h1,h2,h3{font-family:var(--display);color:var(--navy);letter-spacing:-.01em}
+header{position:sticky;top:0;z-index:30;overflow:hidden;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 58%,var(--blue-dark) 100%);
+  color:#fff;padding:13px 18px;display:flex;align-items:center;gap:13px;min-height:62px}
+header::after{content:"";position:absolute;inset:0;background-image:var(--noise);pointer-events:none}
+header>*{position:relative;z-index:1}
+header img{height:30px;width:auto}
+.hbadge{font-family:var(--nav);font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);padding:3px 9px;border-radius:999px}
+header .sp{margin-left:auto;display:flex;align-items:center;gap:9px}
+.sync{font-family:var(--nav);font-size:.7rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
+  padding:4px 10px;border-radius:999px;color:#CFE4F3;display:inline-flex;align-items:center;gap:6px}
+.sync .dot{width:6px;height:6px;border-radius:50%;background:#57D08D;animation:live 2s infinite}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.35}}
+.who{font-family:var(--nav);font-size:.74rem;color:#9FBBD0;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.out{width:32px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);
+  color:#CFE4F3;cursor:pointer;display:grid;place-items:center;flex:none;transition:all .15s}
+.out:hover{background:rgba(255,255,255,.22);color:#fff}
+.out svg{width:16px;height:16px}
+nav.tabs{position:sticky;top:62px;z-index:29;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);display:flex;gap:2px;padding:0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+nav.tabs button{flex:none;font:inherit;font-family:var(--nav);font-weight:600;font-size:.85rem;color:var(--slate);
+  background:none;border:none;border-bottom:2.5px solid transparent;padding:14px 13px;cursor:pointer;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:7px;transition:color .15s}
+nav.tabs button svg{width:15px;height:15px;opacity:.6}
+nav.tabs button:hover{color:var(--blue-dark)}
+nav.tabs button.on{color:var(--blue);border-bottom-color:var(--blue)}
+nav.tabs button.on svg{opacity:1}
+nav.tabs .pill{background:var(--blue);color:#fff;font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:999px;min-width:17px;text-align:center}
+nav.tabs .pill.zero{background:var(--g200);color:var(--slate)}
+nav.tabs .pill.alert{background:var(--red-ink)}
+main{padding:18px;max-width:1180px;margin:0 auto}
+.hello{margin-bottom:16px}
+.hello h1{font-size:1.5rem;margin-bottom:2px}
+.hello p{font-size:.88rem;color:var(--slate)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;
+  transition:transform .18s,box-shadow .18s,border-color .18s}
+.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-soft);border-color:var(--blue)}
+.stat .si{width:34px;height:34px;border-radius:10px;background:var(--ice);color:var(--blue);
+  display:grid;place-items:center;margin-bottom:10px}
+.stat .si svg{width:17px;height:17px}
+.stat:nth-child(2) .si{background:var(--mint);color:var(--mint-ink)}
+.stat:nth-child(3) .si{background:var(--peach);color:var(--peach-ink)}
+.stat:nth-child(4) .si{background:var(--lilac);color:var(--lilac-ink)}
+.stat b{display:block;font-family:var(--display);font-size:1.9rem;font-weight:700;color:var(--navy);line-height:1}
+.stat span{font-size:.76rem;color:var(--slate)}
+.stat.alert{border-color:#E9A0A0;background:linear-gradient(180deg,#fff,var(--red))}
+.stat.alert .si{background:var(--red);color:var(--red-ink)}
+.stat.alert b{color:var(--red-ink)}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin-bottom:14px}
+.panel>h2{font-size:1.06rem;margin-bottom:3px;display:flex;align-items:center;gap:9px}
+.panel>h2 .pi{width:30px;height:30px;border-radius:9px;background:var(--ice);color:var(--blue);display:grid;place-items:center;flex:none}
+.panel>h2 .pi svg{width:15px;height:15px}
+.panel>p.sub{font-size:.82rem;color:var(--slate);margin-bottom:15px}
+.todo{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;
+  margin-bottom:8px;transition:all .16s;cursor:pointer;background:#fff}
+.todo:hover{border-color:var(--blue);background:var(--ice-2);transform:translateX(3px)}
+.todo .ti{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--ice);color:var(--blue)}
+.todo.urgent .ti{background:var(--red);color:var(--red-ink)}
+.todo.warn .ti{background:var(--butter);color:var(--butter-ink)}
+.todo .ti svg{width:16px;height:16px}
+.todo b{display:block;font-family:var(--nav);font-size:.9rem;color:var(--navy);line-height:1.3}
+.todo small{font-size:.76rem;color:var(--slate)}
+.todo .go{margin-left:auto;color:var(--slate);flex:none}
+.todo .go svg{width:16px;height:16px}
+.all-clear{text-align:center;padding:26px;color:var(--mint-ink);background:var(--mint);border-radius:12px;font-size:.9rem}
+.all-clear b{display:block;font-family:var(--display);font-size:1.05rem;margin-bottom:3px;color:var(--mint-ink)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.bar input[type=search]{flex:1;min-width:160px;font:inherit;font-size:.88rem;padding:10px 13px 10px 36px;
+  border:1px solid var(--g200);border-radius:11px;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235D6E80' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 12px center/15px}
+.bar input[type=search]:focus{outline:2px solid var(--blue);border-color:var(--blue)}
+.frow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:9px}
+.flbl{font-family:var(--nav);font-size:.66rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--slate);min-width:58px}
+.chip{font:inherit;font-family:var(--nav);font-size:.78rem;font-weight:600;background:#fff;border:1px solid var(--g200);
+  color:var(--navy);padding:6px 12px;border-radius:999px;cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--blue);background:var(--ice)}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 12px rgba(19,138,192,.28)}
+.fcount{font-family:var(--nav);font-size:.78rem;color:var(--slate);margin-left:auto}
+.btn{font:inherit;font-family:var(--nav);font-weight:600;font-size:.83rem;padding:9px 15px;border-radius:10px;
+  border:1px solid var(--g200);background:#fff;color:var(--navy);cursor:pointer;transition:all .15s;
+  display:inline-flex;align-items:center;gap:7px;line-height:1.2;text-decoration:none}
+.btn:hover{border-color:var(--blue);background:var(--ice);transform:translateY(-1px)}
+.btn.pri{background:linear-gradient(135deg,var(--blue-lt),var(--blue) 60%,var(--blue-dark));border-color:transparent;
+  color:#fff;box-shadow:0 6px 16px rgba(19,138,192,.3)}
+.btn.pri:hover{box-shadow:0 9px 22px rgba(19,138,192,.42)}
+.btn.danger{background:var(--red-ink);border-color:var(--red-ink);color:#fff}
+.btn.danger:hover{background:#a5301f;border-color:#a5301f}
+.btn.sm{padding:6px 11px;font-size:.76rem}
+.btn svg{width:14px;height:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:10px;
+  transition:box-shadow .16s}
+.card:hover{box-shadow:var(--shadow-soft)}
+.card.is-new{border-left:3px solid var(--blue)}
+.card .top{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.card h3{font-family:var(--nav);font-size:1rem;font-weight:600;margin-bottom:2px}
+.card .meta{font-size:.76rem;color:var(--slate)}
+.card .right{margin-left:auto;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tag{font-family:var(--nav);font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:6px;
+  background:var(--ice);color:var(--blue-dark);text-transform:uppercase;letter-spacing:.05em}
+.tag.new{background:var(--blue);color:#fff}
+.tag.contacted{background:var(--butter);color:var(--butter-ink)}
+.tag.converted{background:var(--mint);color:var(--mint-ink)}
+.tag.closed{background:var(--g100);color:var(--slate)}
+.tag.due{background:var(--red-ink);color:#fff}
+.card .body{margin-top:11px;font-size:.85rem}
+.kv{display:flex;gap:8px;margin-top:4px;align-items:baseline}
+.kv b{font-family:var(--nav);color:var(--navy);font-weight:600;min-width:76px;font-size:.78rem}
+.kv span{color:var(--slate)}
+select.st{font:inherit;font-family:var(--nav);font-size:.76rem;font-weight:600;padding:6px 26px 6px 11px;
+  border:1px solid var(--g200);border-radius:999px;color:var(--navy);cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23138AC0' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center/12px}
+select.st:focus{outline:2px solid var(--blue);border-color:var(--blue)}
+.note{width:100%;font:inherit;font-size:.83rem;padding:9px 11px;border:1px solid var(--g200);border-radius:10px;
+  margin-top:11px;background:var(--g50);resize:vertical;font-family:var(--body)}
+.note:focus{outline:2px solid var(--blue);background:#fff}
+a.tel{color:var(--blue-dark);text-decoration:none;font-weight:600}
+a.tel:hover{text-decoration:underline}
+.empty{text-align:center;padding:48px 20px;color:var(--slate);font-size:.88rem;
+  background:#fff;border:1px dashed var(--g200);border-radius:16px}
+.empty b{display:block;font-family:var(--display);color:var(--navy);font-size:1.05rem;margin-bottom:6px}
+.err{background:var(--red);border:1px solid #E9A0A0;color:var(--red-ink);padding:12px 14px;border-radius:11px;
+  font-size:.84rem;margin-bottom:12px}
+.ok{background:var(--mint);color:var(--mint-ink);padding:10px 13px;border-radius:10px;font-size:.83rem;margin-top:10px}
+.erase{border:1px solid #E9A0A0;background:linear-gradient(180deg,#fff,var(--red));border-radius:14px;padding:16px;margin-top:12px}
+.erase h4{font-family:var(--nav);font-size:.88rem;color:var(--red-ink);margin-bottom:4px;display:flex;align-items:center;gap:7px}
+.erase h4 svg{width:15px;height:15px}
+.erase p{font-size:.79rem;color:var(--slate);margin-bottom:11px}
+.found{background:#fff;border:1px solid var(--g200);border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:.81rem}
+.found .fr{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--g100)}
+.found .fr:last-child{border-bottom:none}
+.found .fr b{font-family:var(--nav);color:var(--navy);font-weight:600}
+.found .fr span{color:var(--slate)}
+.echk{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:11px}
+.echk label{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:var(--navy);cursor:pointer;font-family:var(--nav)}
+.cfg label{display:block;font-family:var(--nav);font-size:.74rem;font-weight:600;color:var(--slate);margin:12px 0 5px}
+.cfg input,.cfg textarea{width:100%;font:inherit;font-size:.87rem;padding:10px 12px;border:1px solid var(--g200);
+  border-radius:10px;background:var(--g50);font-family:var(--body)}
+.cfg input:focus,.cfg textarea:focus{outline:2px solid var(--blue);background:#fff}
+.cfg textarea{font-family:ui-monospace,Menlo,monospace;font-size:.79rem;line-height:1.55}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.op{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:9px}
+.op.off{opacity:.55;background:var(--g50)}
+.op .hd{display:flex;gap:10px;align-items:center}
+.op input[type=text]{font:inherit;font-size:.87rem;padding:10px 12px;border:1px solid var(--g200);
+  border-radius:10px;background:var(--g50);font-family:var(--body)}
+.op input[type=text]:focus{outline:2px solid var(--blue);background:#fff}
+.op .hd input[type=text]{flex:1;font-family:var(--nav);font-weight:600;font-size:.92rem}
+.sw{position:relative;width:42px;height:24px;flex:none}
+.sw input{opacity:0;width:0;height:0}
+.sw span{position:absolute;inset:0;background:var(--g200);border-radius:999px;cursor:pointer;transition:.2s}
+.sw span::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked+span{background:var(--blue)}
+.sw input:checked+span::before{transform:translateX(18px)}
+.chips2{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.chips2 label{font-family:var(--nav);font-size:.71rem;font-weight:600;padding:4px 9px;border-radius:7px;
+  background:var(--g100);color:var(--slate);cursor:pointer;border:1px solid transparent}
+.chips2 input{display:none}
+.chips2 label:has(input:checked){background:var(--ice);border-color:var(--sky);color:var(--blue-dark)}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--g200);border-top-color:var(--blue);
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (max-width:820px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .row{grid-template-columns:1fr}
+  .card .right{margin-left:0;width:100%}
+  main{padding:13px}
+  .flbl{min-width:0;width:100%;margin-bottom:-3px}
+  .fcount{margin-left:0;width:100%}
+}
+</style></head><body>
+
+<header>
+  <img src="${LOGO_DATA}" alt="ProHealth">
+  <span class="hbadge">Admin</span>
+  <div class="sp">
+    <span class="sync" id="sync"><span class="dot"></span><span id="syncTx">&hellip;</span></span>
+    <span class="who" id="who"></span>
+    <button class="out" id="out" title="Sign out" aria-label="Sign out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs"></nav>
+<main id="view"><div class="empty"><span class="spin"></span></div></main>
+
+<script>
+const I = {
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9h13v-9"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>',
+  brief:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  cog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.13.3.35.55.63.72"/></svg>',
+  phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const api = async (path, opts) => {
+  const r = await fetch('/admin/api' + path, Object.assign({ headers:{'Content-Type':'application/json'} }, opts || {}));
+  if (r.status === 401 || r.status === 403) { location.href = '/admin'; throw new Error('signed out'); }
+  if (!r.ok) throw new Error((await r.text()).slice(0,160) || ('HTTP ' + r.status));
+  return r.json();
+};
+const D = (iso) => iso ? new Date(iso.replace(' ','T') + (iso.indexOf('Z') > -1 ? '' : 'Z')) : null;
+const fmt = (iso) => { const d = D(iso); return d ? new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(d) : ''; };
+const ago = (iso) => { const d = D(iso); if(!d) return '';
+  const s = (Date.now() - d) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago'; };
+
+let TAB = 'overview', DATA = {leads:[],applications:[],data_requests:[]}, C = {}, Q = '';
+let F = { leads:{status:'all',type:'all'}, applications:{status:'all',role:'All',office:'All',resume:'all'}, requests:{status:'all',due:'all'} };
+const TABS = [['overview','Overview','home'],['leads','Leads','users'],['applications','Applicants','brief'],
+              ['requests','Data requests','lock'],['openings','Openings','list'],['settings','Settings','cog']];
+
+function paintTabs(){
+  $('tabs').innerHTML = TABS.map(function(t){
+    const k = t[0], l = t[1], ic = t[2];
+    let pill = '';
+    if (k === 'leads' || k === 'applications' || k === 'requests') {
+      const n = C[k] || 0;
+      const isAlert = k === 'requests' && (C.overdue || 0) > 0;
+      pill = '<span class="pill ' + (isAlert ? 'alert' : (n ? '' : 'zero')) + '">' + n + '</span>';
+    }
+    return '<button class="' + (TAB === k ? 'on' : '') + '" data-t="' + k + '">' + I[ic] + l + pill + '</button>';
+  }).join('');
+  Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function(b){
+    b.onclick = function(){ TAB = b.dataset.t; Q = ''; paintTabs(); render(); };
+  });
+}
+
+async function load(){
+  try {
+    const d = await api('/all');
+    DATA = d;
+    const overdue = d.data_requests.filter(function(x){ return x.status==='new' && x.due_by && new Date(x.due_by) < new Date(); }).length;
+    C = { leads: d.leads.filter(function(x){return x.status==='new';}).length,
+          applications: d.applications.filter(function(x){return x.status==='new';}).length,
+          requests: d.data_requests.filter(function(x){return x.status==='new';}).length,
+          overdue: overdue };
+    $('syncTx').textContent = new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit'}).format(new Date());
+    $('who').textContent = d.user || '';
+    paintTabs(); render();
+  } catch(e) {
+    $('view').innerHTML = '<div class="err"><b>Could not load.</b><br>' + esc(e.message) + '</div>';
+  }
+}
+
+/* ---------------- overview ---------------- */
+function greet(){ const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; }
+function go(t){ TAB = t; Q = ''; paintTabs(); render(); scrollTo({top:0,behavior:'smooth'}); }
+function statCard(ic, n, label, tab, isAlert){
+  return '<div class="stat' + (isAlert ? ' alert' : '') + '" onclick="go(\\'' + tab + '\\')"><span class="si">' + I[ic] + '</span><b>' + n + '</b><span>' + label + '</span></div>';
+}
+function renderOverview(){
+  const L = DATA.leads, A = DATA.applications, R = DATA.data_requests;
+  const day = L.filter(function(x){ return Date.now() - D(x.created_at) < 864e5; }).length;
+  const week = L.filter(function(x){ return Date.now() - D(x.created_at) < 7*864e5; }).length;
+  const overdue = R.filter(function(x){ return x.status==='new' && x.due_by && new Date(x.due_by) < new Date(); });
+  const dueSoon = R.filter(function(x){ return x.status==='new' && x.due_by && overdue.indexOf(x)===-1 && (new Date(x.due_by)-Date.now())/864e5 < 10; });
+  const newLeads = L.filter(function(x){ return x.status==='new'; });
+  const stale = newLeads.filter(function(x){ return Date.now() - D(x.created_at) > 2*3600e3; });
+  const newApps = A.filter(function(x){ return x.status==='new'; });
+
+  const todos = [];
+  overdue.forEach(function(r){ todos.push(['urgent','alert','Data request ' + esc(r.ref||'') + ' is OVERDUE',
+    esc(r.name) + ' &middot; legal deadline was ' + fmt(r.due_by), 'requests']); });
+  dueSoon.forEach(function(r){ todos.push(['warn','clock','Data request ' + esc(r.ref||'') + ' due in ' + Math.ceil((new Date(r.due_by)-Date.now())/864e5) + ' days',
+    esc(r.name) + ' &middot; ' + esc(r.request_type||''), 'requests']); });
+  if (stale.length) todos.push(['warn','phone', stale.length + ' lead' + (stale.length>1?'s':'') + ' waiting more than 2 hours',
+    'The site promises a 2 hour reply during business hours', 'leads']);
+  else if (newLeads.length) todos.push(['','phone', newLeads.length + ' new lead' + (newLeads.length>1?'s':'') + ' to call',
+    'Nothing overdue yet', 'leads']);
+  if (newApps.length) todos.push(['','brief', newApps.length + ' new applicant' + (newApps.length>1?'s':''),
+    'The careers page promises a call within one business day', 'applications']);
+
+  $('view').innerHTML =
+    '<div class="hello"><h1>' + greet() + '</h1><p>' + (todos.length ? 'Here is what needs you today.' : 'Nothing outstanding. Everything is answered.') + '</p></div>'
+    + '<div class="stats">'
+      + statCard('phone', C.leads||0, 'New leads', 'leads', stale.length > 0)
+      + statCard('users', day, 'Leads today', 'leads', false)
+      + statCard('brief', C.applications||0, 'New applicants', 'applications', false)
+      + statCard('lock', overdue.length, 'Overdue requests', 'requests', overdue.length > 0)
+    + '</div>'
+    + '<div class="panel"><h2><span class="pi">' + I.check + '</span>Outstanding</h2>'
+      + '<p class="sub">Everything waiting on a person, most urgent first.</p>'
+      + (todos.length
+          ? todos.map(function(t){ return '<div class="todo ' + t[0] + '" onclick="go(\\'' + t[4] + '\\')"><span class="ti">' + I[t[1]] + '</span><span><b>' + t[2] + '</b><small>' + t[3] + '</small></span><span class="go">' + I.chev + '</span></div>'; }).join('')
+          : '<div class="all-clear"><b>All clear</b>No overdue requests, no unanswered leads, no waiting applicants.</div>')
+    + '</div>'
+    + '<div class="panel"><h2><span class="pi">' + I.clock + '</span>Latest activity</h2>'
+      + '<p class="sub">The last ten things that happened, across everything.</p>' + recent() + '</div>'
+    + '<div class="panel"><h2><span class="pi">' + I.cog + '</span>This week</h2>'
+      + '<p class="sub">' + week + ' lead' + (week===1?'':'s') + ' in the last seven days &middot; '
+      + L.filter(function(x){return x.status==='converted';}).length + ' converted all time &middot; '
+      + A.length + ' applicant' + (A.length===1?'':'s') + ' on file</p></div>';
+}
+function recent(){
+  const all = []
+    .concat(DATA.leads.map(function(x){ return {t:x.created_at,k:'lead',n:x.name,d:x.service||x.type||''}; }))
+    .concat(DATA.applications.map(function(x){ return {t:x.created_at,k:'applicant',n:x.name,d:x.role||''}; }))
+    .concat(DATA.data_requests.map(function(x){ return {t:x.created_at,k:'data request',n:x.name,d:x.request_type||''}; }))
+    .filter(function(x){ return x.t; }).sort(function(a,b){ return D(b.t) - D(a.t); }).slice(0,10);
+  if (!all.length) return '<div class="empty" style="padding:24px"><b>Nothing yet</b>New submissions appear here the moment they arrive.</div>';
+  return all.map(function(x){
+    const ic = x.k === 'lead' ? 'phone' : x.k === 'applicant' ? 'brief' : 'lock';
+    return '<div class="todo" style="cursor:default"><span class="ti">' + I[ic] + '</span><span><b>' + esc(x.n) + '</b><small>' + esc(x.k) + (x.d ? ' &middot; ' + esc(x.d) : '') + '</small></span><span class="go" style="font-size:.75rem;font-family:var(--nav)">' + ago(x.t) + '</span></div>';
+  }).join('');
+}
+
+/* ---------------- lists ---------------- */
+const STATUSES = ['new','contacted','converted','closed'];
+const ROLE_GROUPS = [['All','All roles'],['Nursing','Nursing'],['Therapy','Therapy'],['Care','Aides & care'],['Office','Office & social']];
+function roleGroup(t){
+  t = (t||'').toLowerCase();
+  if (/\\b(rn|lvn|lpn|nurse|nursing)\\b/.test(t)) return 'Nursing';
+  if (/therap|physical|occupational|speech|slp|\\bpt\\b|\\bot\\b/.test(t)) return 'Therapy';
+  if (/aide|hha|caregiver|companion/.test(t)) return 'Care';
+  return 'Office';
+}
+function setF(k,f,v){ F[k][f] = v; render(); }
+function chips(key, field, opts){
+  return opts.map(function(o){
+    const v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : o;
+    return '<button class="chip' + (F[key][field] === v ? ' on' : '') + '" onclick="setF(\\'' + key + '\\',\\'' + field + '\\',\\'' + v + '\\')">' + l + '</button>';
+  }).join('');
+}
+function filterRows(){
+  const q = Q.toLowerCase().trim();
+  const rows = TAB === 'leads' ? DATA.leads : TAB === 'applications' ? DATA.applications : DATA.data_requests;
+  const f = F[TAB] || {};
+  return rows.filter(function(r){
+    if (f.status && f.status !== 'all' && r.status !== f.status) return false;
+    if (TAB === 'leads' && f.type !== 'all' && r.type !== f.type) return false;
+    if (TAB === 'applications') {
+      if (f.role !== 'All' && roleGroup(r.role) !== f.role) return false;
+      if (f.office !== 'All' && (r.office||'') !== f.office) return false;
+      if (f.resume === 'yes' && !r.resume_key) return false;
+      if (f.resume === 'no' && r.resume_key) return false;
+    }
+    if (TAB === 'requests') {
+      const od = r.status === 'new' && r.due_by && new Date(r.due_by) < new Date();
+      if (f.due === 'overdue' && !od) return false;
+      if (f.due === 'soon' && !(r.status==='new' && r.due_by && !od && (new Date(r.due_by)-Date.now())/864e5 < 10)) return false;
+    }
+    if (!q) return true;
+    return JSON.stringify(r).toLowerCase().indexOf(q) > -1;
+  });
+}
+function renderList(){
+  const rows = filterRows();
+  let filters = '';
+  if (TAB === 'leads') {
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('leads','status',[['all','All']].concat(STATUSES)) + '</div>'
+            + '<div class="frow"><span class="flbl">Type</span>' + chips('leads','type',[['all','All'],['callback','Callback'],['referral','Referral'],['contact','Contact form']])
+            + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.length + '</span></div>';
+  } else if (TAB === 'applications') {
+    const offices = ['All'].concat(DATA.applications.map(function(a){return a.office;}).filter(function(v,i,s){ return v && s.indexOf(v)===i; }));
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('applications','status',[['all','All']].concat(STATUSES)) + '</div>'
+            + '<div class="frow"><span class="flbl">Role</span>' + chips('applications','role',ROLE_GROUPS) + '</div>'
+            + '<div class="frow"><span class="flbl">Office</span>' + chips('applications','office',offices) + '</div>'
+            + '<div class="frow"><span class="flbl">Resume</span>' + chips('applications','resume',[['all','Any'],['yes','Attached'],['no','Missing']])
+            + '<span class="fcount">' + rows.length + ' of ' + DATA.applications.length + '</span></div>';
+  } else {
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('requests','status',[['all','All']].concat(STATUSES)) + '</div>'
+            + '<div class="frow"><span class="flbl">Deadline</span>' + chips('requests','due',[['all','Any'],['overdue','Overdue'],['soon','Due soon']])
+            + '<span class="fcount">' + rows.length + ' of ' + DATA.data_requests.length + '</span></div>';
+  }
+  $('view').innerHTML =
+    '<div class="bar"><input type="search" id="q" placeholder="Search name, phone, email&hellip;" value="' + esc(Q) + '">'
+    + '<button class="btn" onclick="load()">Refresh</button>'
+    + '<button class="btn" onclick="exportCsv()">' + I.down + 'CSV</button></div>'
+    + filters
+    + (rows.length ? rows.map(cardFor).join('')
+       : '<div class="empty"><b>Nothing here</b>New submissions appear here the moment they arrive.</div>');
+  const q = $('q');
+  if (q) q.oninput = function(){ Q = q.value; renderList(); const n = $('q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+}
+function stSel(id, cur, kind){
+  return '<select class="st" onchange="setStatus(\\'' + kind + '\\',\\'' + id + '\\',this.value)">'
+    + STATUSES.map(function(s){ return '<option value="' + s + '"' + (cur===s?' selected':'') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'; }).join('')
+    + '</select>';
+}
+async function setStatus(kind, id, status){
+  await api('/' + kind + '/' + id, {method:'PATCH', body:JSON.stringify({status:status})});
+  const key = kind === 'requests' ? 'data_requests' : kind;
+  const row = DATA[key].filter(function(x){ return x.id === id; })[0];
+  if (row) row.status = status;
+  C[kind] = DATA[key].filter(function(x){ return x.status === 'new'; }).length;
+  C.overdue = DATA.data_requests.filter(function(x){ return x.status==='new' && x.due_by && new Date(x.due_by) < new Date(); }).length;
+  paintTabs(); renderList();
+}
+let noteT;
+function saveNote(kind, id, v){
+  clearTimeout(noteT);
+  noteT = setTimeout(function(){ api('/' + kind + '/' + id, {method:'PATCH', body:JSON.stringify({notes:v})}).catch(function(){}); }, 600);
+}
+function cardFor(r){
+  const isNew = r.status === 'new';
+  if (TAB === 'leads') return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
+    + '<div><h3>' + esc(r.name) + '</h3><div class="meta">' + fmt(r.created_at) + ' &middot; ' + ago(r.created_at) + (r.page ? ' &middot; ' + esc(r.page) : '') + '</div></div>'
+    + '<div class="right"><span class="tag ' + esc(r.status) + '">' + esc(r.status) + '</span>' + stSel(r.id, r.status, 'leads') + '</div></div>'
+    + '<div class="body"><div class="kv"><b>Phone</b><span><a class="tel" href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a></span></div>'
+    + (r.email ? '<div class="kv"><b>Email</b><span><a class="tel" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></span></div>' : '')
+    + '<div class="kv"><b>Service</b><span>' + esc(r.service||'-') + ' &middot; ' + esc(r.type||'-') + '</span></div>'
+    + (r.message ? '<div class="kv"><b>Message</b><span>' + esc(r.message) + '</span></div>' : '') + '</div>'
+    + '<textarea class="note" placeholder="Notes (saved automatically)" oninput="saveNote(\\'leads\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
+
+  if (TAB === 'applications') return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
+    + '<div><h3>' + esc(r.name) + '</h3><div class="meta">' + fmt(r.created_at) + ' &middot; ' + ago(r.created_at) + '</div></div>'
+    + '<div class="right"><span class="tag ' + esc(r.status) + '">' + esc(r.status) + '</span>' + stSel(r.id, r.status, 'applications')
+    + (r.resume_key ? '<a class="btn sm pri" href="/admin/api/resume?key=' + encodeURIComponent(r.resume_key) + '" target="_blank">' + I.doc + 'Resume</a>' : '<span class="tag closed">no resume</span>')
+    + '</div></div>'
+    + '<div class="body"><div class="kv"><b>Phone</b><span><a class="tel" href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a></span></div>'
+    + (r.email ? '<div class="kv"><b>Email</b><span><a class="tel" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></span></div>' : '')
+    + '<div class="kv"><b>Role</b><span>' + esc(r.role||'-') + (r.office ? ' &middot; ' + esc(r.office) : '') + '</span></div>'
+    + (r.license ? '<div class="kv"><b>License</b><span>' + esc(r.license) + '</span></div>' : '') + '</div>'
+    + '<textarea class="note" placeholder="Interview notes (saved automatically)" oninput="saveNote(\\'applications\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
+
+  const od = r.status === 'new' && r.due_by && new Date(r.due_by) < new Date();
+  const days = r.due_by ? Math.ceil((new Date(r.due_by) - Date.now())/864e5) : null;
+  return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
+    + '<div><h3>' + esc(r.name) + ' <span class="tag">' + esc(r.ref) + '</span></h3>'
+    + '<div class="meta">' + fmt(r.created_at) + ' &middot; ' + esc(r.relationship) + '</div></div>'
+    + '<div class="right">' + (od ? '<span class="tag due">overdue</span>' : (days !== null ? '<span class="tag' + (days < 10 ? ' contacted' : '') + '">' + days + 'd left</span>' : ''))
+    + '<span class="tag ' + esc(r.status) + '">' + esc(r.status) + '</span>' + stSel(r.id, r.status, 'requests') + '</div></div>'
+    + '<div class="body"><div class="kv"><b>Request</b><span>' + esc(r.request_type||'-') + '</span></div>'
+    + '<div class="kv"><b>Email</b><span><a class="tel" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></span></div>'
+    + (r.phone ? '<div class="kv"><b>Phone</b><span>' + esc(r.phone) + '</span></div>' : '')
+    + (r.dob ? '<div class="kv"><b>DOB</b><span>' + esc(r.dob) + '</span></div>' : '')
+    + (r.is_agent ? '<div class="kv"><b>Agent</b><span>Submitted by an authorised agent, written authorisation required</span></div>' : '')
+    + (r.details ? '<div class="kv"><b>Details</b><span>' + esc(r.details) + '</span></div>' : '')
+    + '<div class="kv"><b>Due by</b><span>' + (r.due_by ? fmt(r.due_by) : '-') + ' &middot; 45 calendar days (CCPA)</span></div></div>'
+    + eraseBox(r)
+    + '<textarea class="note" placeholder="Privacy Officer notes (saved automatically)" oninput="saveNote(\\'requests\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
+}
+
+/* ---------------- find & erase ---------------- */
+function eraseBox(r){
+  const id = 'er_' + String(r.id).replace(/[^\\w]/g,'');
+  return '<div class="erase"><h4>' + I.trash + 'Erase this person&rsquo;s data</h4>'
+    + '<p>Finds everything held against <b>' + esc(r.email) + '</b> and deletes it permanently. '
+    + 'The request itself is kept: it is your evidence that you complied.</p>'
+    + '<button class="btn" onclick="findFor(\\'' + esc(r.email) + '\\',\\'' + id + '\\')">' + I.search + 'Find their data</button>'
+    + '<div id="' + id + '"></div></div>';
+}
+async function findFor(email, boxId){
+  const box = $(boxId);
+  box.innerHTML = '<div style="padding:10px"><span class="spin"></span> Searching&hellip;</div>';
+  try {
+    const d = await api('/find?email=' + encodeURIComponent(email));
+    const resumes = d.applications.filter(function(a){ return a.resume_key; }).length;
+    if (!d.leads.length && !d.applications.length) {
+      box.innerHTML = '<div class="ok" style="margin-top:10px">Nothing erasable found for ' + esc(email) + '. '
+        + 'Only the request itself (' + d.data_requests.length + ') is on file, and that is kept as your compliance record.</div>';
+      return;
+    }
+    box.innerHTML = '<div class="found" style="margin-top:10px">'
+      + '<div class="fr"><b>Leads / enquiries</b><span>' + d.leads.length + '</span></div>'
+      + '<div class="fr"><b>Job applications</b><span>' + d.applications.length + '</span></div>'
+      + '<div class="fr"><b>Resume files</b><span>' + resumes + '</span></div>'
+      + '<div class="fr"><b>Data requests (kept)</b><span>' + d.data_requests.length + '</span></div></div>'
+      + '<div class="echk">'
+      + '<label><input type="checkbox" id="' + boxId + '_l" ' + (d.leads.length ? 'checked' : 'disabled') + '> Leads</label>'
+      + '<label><input type="checkbox" id="' + boxId + '_a" ' + (d.applications.length ? 'checked' : 'disabled') + '> Applications</label>'
+      + '<label><input type="checkbox" id="' + boxId + '_r" ' + (resumes ? 'checked' : 'disabled') + '> Resume files</label>'
+      + '</div>'
+      + '<button class="btn danger" onclick="doErase(\\'' + esc(email) + '\\',\\'' + boxId + '\\')">' + I.trash + 'Erase permanently</button>';
+  } catch(e) { box.innerHTML = '<div class="err" style="margin-top:10px">' + esc(e.message) + '</div>'; }
+}
+async function doErase(email, boxId){
+  const what = [];
+  if ($(boxId + '_l') && $(boxId + '_l').checked) what.push('leads');
+  if ($(boxId + '_a') && $(boxId + '_a').checked) what.push('applications');
+  if ($(boxId + '_r') && $(boxId + '_r').checked) what.push('resumes');
+  if (!what.length) { alert('Nothing selected.'); return; }
+  if (!confirm('Permanently erase ' + what.join(', ') + ' for ' + email + '?\\n\\nThis cannot be undone. It will be written to the audit log.')) return;
+  const box = $(boxId);
+  box.innerHTML = '<div style="padding:10px"><span class="spin"></span> Erasing&hellip;</div>';
+  try {
+    const d = await api('/erase', {method:'POST', body:JSON.stringify({email:email, what:what})});
+    box.innerHTML = '<div class="ok" style="margin-top:10px"><b>Erased.</b> '
+      + Object.keys(d.deleted).map(function(k){ return d.deleted[k] + ' ' + k; }).join(', ')
+      + '. Recorded in the audit log. Reply to ' + esc(email) + ' to confirm, then mark the request Converted.</div>';
+    await load();
+  } catch(e) { box.innerHTML = '<div class="err" style="margin-top:10px">' + esc(e.message) + '</div>'; }
+}
+
+function exportCsv(){
+  const rows = filterRows();
+  if (!rows.length) { alert('Nothing to export.'); return; }
+  const cols = Object.keys(rows[0]);
+  const csv = [cols.join(',')].concat(rows.map(function(r){
+    return cols.map(function(c){ return '"' + String(r[c] == null ? '' : r[c]).replace(/"/g,'""') + '"'; }).join(',');
+  })).join('\\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = 'prohealth-' + TAB + '-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+/* ---------------- openings ---------------- */
+const OFFICES = ['Sacramento','Walnut Creek','San Jose','Stockton','Monterey','Fresno'];
+let OPEN = [];
+async function renderOpenings(){
+  $('view').innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  try { const d = await api('/openings'); OPEN = d.openings || []; }
+  catch(e) { $('view').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; return; }
+  paintOpenings();
+}
+function paintOpenings(){
+  const live = OPEN.filter(function(o){ return o.active !== false; }).length;
+  $('view').innerHTML = '<div class="panel"><h2><span class="pi">' + I.list + '</span>Job openings</h2>'
+    + '<p class="sub">These publish straight to the careers page. Toggle a role off to hide it without losing it, or remove it entirely. '
+    + '<b>' + live + ' live</b> of ' + OPEN.length + ' right now. The site updates within a minute of saving, no deploy needed.</p>'
+    + '<div id="ops">' + OPEN.map(opRow).join('') + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
+    + '<button class="btn" onclick="addOp()">+ Add a role</button>'
+    + '<button class="btn pri" onclick="saveOps()">' + I.check + 'Save and publish</button></div>'
+    + '<div id="opok"></div></div>';
+}
+function opRow(o, i){
+  return '<div class="op' + (o.active === false ? ' off' : '') + '"><div class="hd">'
+    + '<input type="text" value="' + esc(o.title) + '" oninput="OPEN[' + i + '].title=this.value" placeholder="Role title">'
+    + '<label class="sw" title="Show on the site"><input type="checkbox" ' + (o.active !== false ? 'checked' : '')
+    + ' onchange="OPEN[' + i + '].active=this.checked;paintOpenings()"><span></span></label>'
+    + '<button class="btn sm" onclick="removeOp(' + i + ')">' + I.trash + '</button></div>'
+    + '<div class="row" style="margin-top:9px">'
+    + '<input type="text" value="' + esc(o.type) + '" oninput="OPEN[' + i + '].type=this.value" placeholder="Full-time / Part-time / Per-diem">'
+    + '<input type="text" value="' + esc(o.summary) + '" oninput="OPEN[' + i + '].summary=this.value" placeholder="One-line summary">'
+    + '</div><div class="chips2">'
+    + OFFICES.map(function(of){
+        return '<label><input type="checkbox" ' + ((o.offices||[]).indexOf(of) > -1 ? 'checked' : '')
+             + ' onchange="toggleOffice(' + i + ',\\'' + of + '\\',this.checked)"><span>' + of + '</span></label>';
+      }).join('')
+    + '</div></div>';
+}
+function removeOp(i){
+  if (!confirm('Remove "' + (OPEN[i].title || 'this role') + '"?\\n\\nIt disappears from the careers page as soon as you save.')) return;
+  OPEN.splice(i,1); paintOpenings();
+}
+function toggleOffice(i, of, on){
+  const a = OPEN[i].offices = OPEN[i].offices || [];
+  if (on) { if (a.indexOf(of) === -1) a.push(of); }
+  else { OPEN[i].offices = a.filter(function(x){ return x !== of; }); }
+}
+function addOp(){ OPEN.push({title:'',type:'Full-time',summary:'',offices:[],active:true}); paintOpenings(); }
+async function saveOps(){
+  try {
+    const d = await api('/openings', {method:'PUT', body:JSON.stringify({openings:OPEN})});
+    $('opok').innerHTML = '<div class="ok">Saved. ' + d.count + ' role' + (d.count===1?'':'s') + ' on file. The careers page updates within a minute.</div>';
+  } catch(e) { $('opok').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+
+/* ---------------- settings ---------------- */
+async function renderSettings(){
+  $('view').innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  let c = {};
+  try { c = await api('/config'); }
+  catch(e) { $('view').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; return; }
+  const f = function(id, v, ph){ return '<input id="' + id + '" value="' + esc(v) + '" placeholder="' + ph + '">'; };
+  $('view').innerHTML = '<div class="panel cfg"><h2><span class="pi">' + I.cog + '</span>Where leads are emailed</h2>'
+    + '<p class="sub">Each kind of enquiry goes to the inbox you set here, the moment it arrives. Leave one blank to fall back to the default. Separate multiple addresses with commas.</p>'
+    + '<div class="row"><div><label>Default (anything not matched below)</label>' + f('c_default', c.EMAIL_DEFAULT, 'intake@prohealth.us') + '</div>'
+    + '<div><label>Intake and provider referrals</label>' + f('c_intake', c.EMAIL_INTAKE, 'intake@prohealth.us') + '</div></div>'
+    + '<div class="row"><div><label>Hospice and palliative</label>' + f('c_hospice', c.EMAIL_HOSPICE, 'hospice@prohealth.us') + '</div>'
+    + '<div><label>Careers and applications</label>' + f('c_careers', c.EMAIL_CAREERS, 'hr@prohealth.us') + '</div></div>'
+    + '<div class="row"><div><label>Privacy and data requests</label>' + f('c_privacy', c.EMAIL_PRIVACY, 'privacy@prohealth.us') + '</div>'
+    + '<div><label>From address (must be a verified Resend domain)</label>' + f('c_from', c.EMAIL_FROM, 'ProHealth &lt;no-reply@prohealth.us&gt;') + '</div></div>'
+    + '<button class="btn pri" style="margin-top:14px" onclick="saveCfg()">' + I.check + 'Save routing</button><div id="cfgok"></div></div>'
+    + '<div class="panel cfg"><h2><span class="pi">' + I.clock + '</span>Office hours and closures</h2>'
+    + '<p class="sub">Used by the chatbot and the footer so the site never promises a two hour reply when nobody is there.</p>'
+    + '<div class="row"><div><label>Opens (Pacific)</label>' + f('c_open', c.HOURS_OPEN || '08:30', '08:30') + '</div>'
+    + '<div><label>Closes (Pacific)</label>' + f('c_close', c.HOURS_CLOSE || '17:00', '17:00') + '</div></div>'
+    + '<label>Closure dates, one per line as YYYY-MM-DD = Reason</label>'
+    + '<textarea id="c_hols" rows="6" placeholder="2026-11-26 = Thanksgiving Day">' + esc(c.HOLIDAYS_TEXT) + '</textarea>'
+    + '<button class="btn pri" style="margin-top:12px" onclick="saveCfg()">' + I.check + 'Save hours</button></div>';
+}
+async function saveCfg(){
+  const g = function(id){ return $(id) ? $(id).value.trim() : undefined; };
+  const body = { EMAIL_DEFAULT:g('c_default'), EMAIL_INTAKE:g('c_intake'), EMAIL_HOSPICE:g('c_hospice'),
+                 EMAIL_CAREERS:g('c_careers'), EMAIL_PRIVACY:g('c_privacy'), EMAIL_FROM:g('c_from'),
+                 HOURS_OPEN:g('c_open'), HOURS_CLOSE:g('c_close'),
+                 HOLIDAYS_TEXT: $('c_hols') ? $('c_hols').value : undefined };
+  Object.keys(body).forEach(function(k){ if (body[k] === undefined) delete body[k]; });
+  const t = $('cfgok') || $('view');
+  try { await api('/config', {method:'PUT', body:JSON.stringify(body)});
+    t.innerHTML = '<div class="ok">Saved. New leads use these settings immediately.</div>';
+  } catch(e) { t.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+
+function render(){
+  if (TAB === 'overview') return renderOverview();
+  if (TAB === 'openings') return renderOpenings();
+  if (TAB === 'settings') return renderSettings();
+  renderList();
+}
+$('out').onclick = async function(){
+  if (!confirm('Sign out of the ProHealth admin?')) return;
+  await fetch('/admin/logout', {method:'POST'}).catch(function(){});
+  location.href = '/admin';
+};
+paintTabs(); load();
+setInterval(function(){ if (TAB !== 'openings' && TAB !== 'settings') load(); }, 60000);
+</script></body></html>`;

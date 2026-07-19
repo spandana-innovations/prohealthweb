@@ -1,0 +1,13 @@
+{
+  "name": "ProHealth Home Care, Inc.",
+  "short_name": "ProHealth",
+  "description": "Home health, hospice, palliative and home care across 20 California counties.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#138AC0",
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

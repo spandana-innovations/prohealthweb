@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProHealth Home Care, Inc. — Home Health, Hospice & Palliative Care in Sacramento, CA</title>
+<meta name="description" content="Award-winning home health, hospice, palliative and home care serving Sacramento, CA. Medicare-certified, locally owned. Call 877.667.8770 — referrals answered within 2 hours.">
+<link rel="canonical" href="https://prohealth.us/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0E2740;
+    --navy-2:#16354F;
+    --blue:#1C6DB2;
+    --blue-dark:#155A96;
+    --sky:#8FBFE8;
+    --ice:#EAF3FB;
+    --warm:#FDFBF8;          /* warm paper for alternating sections */
+    --sand:#F6EEE2;          /* soft warm accent surface */
+    --amber:#E9A93D;         /* stars / award only */
+    --slate:#5A6B7D;
+    --line:#DCE6EF;
+    --white:#FFFFFF;
+    --radius:18px;
+    --shadow:0 14px 40px rgba(14,39,64,.12);
+    --shadow-soft:0 6px 20px rgba(14,39,64,.08);
+    --font-display:"Bricolage Grotesque","Inter",system-ui,sans-serif;
+    --font-body:"Inter",system-ui,-apple-system,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--navy);background:var(--white);line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  img{max-width:100%;display:block}
+  a{color:inherit}
+  :focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:4px}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 22px}
+
+  /* ---------- motion ---------- */
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+  .reveal.d1{transition-delay:.12s}.reveal.d2{transition-delay:.24s}.reveal.d3{transition-delay:.36s}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes floaty2{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  @keyframes dash{to{stroke-dashoffset:0}}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .reveal{opacity:1;transform:none}
+  }
+
+  /* ---------- header ---------- */
+  header{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:28px;height:74px}
+  .logo{display:flex;align-items:center;text-decoration:none}
+  .logo img{height:46px;width:auto}
+  .logo .logo-fallback{display:none;font-family:var(--font-display);font-weight:700;font-size:1.1rem}
+  nav.links{display:flex;gap:26px;margin-left:auto}
+  nav.links a{text-decoration:none;font-size:.93rem;font-weight:500;color:var(--navy-2);padding:6px 2px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+  nav.links a:hover{border-bottom-color:var(--blue);color:var(--blue-dark)}
+  .nav-call{margin-left:6px;display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;text-decoration:none;font-weight:600;font-size:.9rem;padding:11px 20px;border-radius:999px;transition:background .2s,transform .15s}
+  .nav-call:hover{background:var(--blue-dark);transform:translateY(-1px)}
+  .menu-btn{display:none;margin-left:auto;background:none;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:inherit;font-weight:600;color:var(--navy);cursor:pointer}
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:
+      radial-gradient(950px 500px at 88% -12%, rgba(143,191,232,.5), transparent 62%),
+      radial-gradient(700px 420px at -6% 30%, rgba(246,238,226,.9), transparent 60%),
+      linear-gradient(180deg,#FDFBF8,var(--ice));
+  }
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;padding:64px 0 96px}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--blue-dark);background:#fff;border:1px solid var(--line);padding:8px 15px;border-radius:999px;margin-bottom:22px;box-shadow:var(--shadow-soft)}
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--blue);animation:pulse 2.4s ease-in-out infinite}
+  h1{font-family:var(--font-display);font-size:clamp(2.5rem,5.2vw,4rem);line-height:1.03;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+  h1 em{font-style:normal;color:var(--blue)}
+  .heartline{width:min(340px,80%);height:34px;margin:2px 0 18px}
+  .heartline path{stroke:var(--blue);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:600;stroke-dashoffset:600;animation:dash 2.6s ease .4s forwards}
+  .hero p.lead{font-size:1.13rem;color:var(--slate);max-width:50ch;margin-bottom:28px}
+
+  .care-finder{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px}
+  .care-finder p{font-size:.83rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--slate);margin-bottom:12px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{font:inherit;font-weight:600;font-size:.93rem;color:var(--navy);background:var(--ice);border:1px solid var(--line);border-radius:999px;padding:11px 18px;cursor:pointer;transition:all .18s}
+  .chip:hover{background:var(--blue);border-color:var(--blue);color:#fff;transform:translateY(-2px)}
+
+  /* photo collage */
+  .collage{position:relative;min-height:520px}
+  .collage .main{
+    position:relative;width:88%;margin-left:auto;border-radius:26px;overflow:hidden;
+    box-shadow:0 26px 60px rgba(14,39,64,.22);aspect-ratio:4/4.6;background:linear-gradient(150deg,var(--ice),var(--sand));
+  }
+  .collage .main img{width:100%;height:100%;object-fit:cover}
+  .float-card{
+    position:absolute;background:#fff;border-radius:16px;box-shadow:var(--shadow);
+    padding:14px 18px;display:flex;align-items:center;gap:12px;border:1px solid var(--line);
+  }
+  .fc-award{left:-4%;top:8%;animation:floaty 6s ease-in-out infinite}
+  .fc-response{left:-8%;bottom:20%;animation:floaty2 7s ease-in-out infinite}
+  .fc-review{right:-2%;bottom:-4%;max-width:270px;animation:floaty 8s ease-in-out infinite}
+  .badge-ring{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#F7C665,var(--amber));display:grid;place-items:center;color:#fff;font-family:var(--font-display);font-weight:700;font-size:.85rem;flex:none}
+  .fc-title{font-weight:700;font-size:.9rem;line-height:1.25}
+  .fc-sub{font-size:.76rem;color:var(--slate)}
+  .fc-review p{font-size:.83rem;color:var(--navy-2);line-height:1.45}
+  .stars{color:var(--amber);letter-spacing:2px}
+  .ic-round{width:42px;height:42px;border-radius:50%;background:var(--ice);display:grid;place-items:center;color:var(--blue);flex:none}
+  .ic-round svg{width:21px;height:21px}
+  .roofline{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:80px}
+
+  /* ---------- stats ---------- */
+  .stats{background:#fff;padding:34px 0;border-bottom:1px solid var(--line)}
+  .stats .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;text-align:center}
+  .stat b{font-family:var(--font-display);font-size:2.1rem;font-weight:700;color:var(--blue-dark);display:block;line-height:1.1}
+  .stat span{font-size:.86rem;color:var(--slate)}
+
+  /* ---------- sections ---------- */
+  section{padding:88px 0}
+  .kicker{font-size:.8rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:12px}
+  h2{font-family:var(--font-display);font-size:clamp(1.75rem,3.4vw,2.55rem);font-weight:700;letter-spacing:-.015em;line-height:1.12;margin-bottom:14px}
+  .section-lead{color:var(--slate);max-width:62ch;margin-bottom:46px}
+
+  /* services w/ photos */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;transition:transform .25s,box-shadow .25s}
+  .card:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+  .card .photo{aspect-ratio:4/3;overflow:hidden;background:linear-gradient(140deg,var(--ice),var(--sand));position:relative}
+  .card .photo img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease}
+  .card:hover .photo img{transform:scale(1.06)}
+  .card .body{padding:20px 22px 22px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .card h3{font-family:var(--font-display);font-size:1.18rem;font-weight:600}
+  .card p{font-size:.92rem;color:var(--slate);flex:1}
+  .card a{font-size:.9rem;font-weight:600;color:var(--blue-dark);text-decoration:none}
+  .card a:hover{text-decoration:underline}
+
+  /* video */
+  .video-sec{background:var(--warm)}
+  .video-grid{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center}
+  .video-frame{position:relative;border-radius:22px;overflow:hidden;box-shadow:var(--shadow);aspect-ratio:16/9;background:var(--navy)}
+  .video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .checks{list-style:none;margin:22px 0 26px;display:grid;gap:13px}
+  .checks li{display:flex;gap:12px;align-items:flex-start;font-size:.97rem;color:var(--navy-2)}
+  .checks svg{width:20px;height:20px;color:var(--blue);flex:none;margin-top:3px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font:inherit;font-weight:600;font-size:.98rem;text-decoration:none;cursor:pointer;padding:15px 27px;border-radius:13px;border:none;transition:all .18s}
+  .btn-blue{background:var(--blue);color:#fff}
+  .btn-blue:hover{background:var(--blue-dark);transform:translateY(-1px)}
+  .btn-white{background:#fff;color:var(--navy)}
+  .btn-white:hover{background:var(--ice)}
+  .btn-ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.4)}
+  .btn-ghost:hover{border-color:#fff}
+
+  /* referral band */
+  .refer{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 55%,#1B4A73 100%);color:#fff;border-radius:26px;padding:58px 56px;display:grid;grid-template-columns:1.3fr 1fr;gap:44px;align-items:center;position:relative;overflow:hidden}
+  .refer::after{content:"";position:absolute;right:-120px;top:-120px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(143,191,232,.25),transparent 70%)}
+  .refer h2{color:#fff}
+  .refer p{color:#C8DAE9;max-width:52ch}
+  .promise{display:flex;gap:14px;margin-top:26px}
+  .promise div{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:13px;padding:15px 19px;font-size:.88rem}
+  .promise b{display:block;font-family:var(--font-display);font-size:1.35rem;color:var(--sky)}
+  .refer-actions{display:flex;flex-direction:column;gap:12px;position:relative;z-index:1}
+
+  /* testimonials carousel */
+  .alt{background:var(--ice)}
+  .carousel{position:relative;max-width:780px;margin:0 auto}
+  .slides{overflow:hidden;border-radius:22px}
+  .track{display:flex;transition:transform .55s cubic-bezier(.22,.8,.3,1)}
+  .slide{flex:0 0 100%;background:#fff;border:1px solid var(--line);border-radius:22px;padding:42px 46px;text-align:center}
+  .slide .stars{font-size:1.05rem;margin-bottom:16px;display:block}
+  .slide p{font-size:1.12rem;color:var(--navy-2);line-height:1.7;margin-bottom:20px;font-family:var(--font-display);font-weight:400}
+  .slide footer{font-size:.9rem;font-weight:600;color:var(--slate)}
+  .dots{display:flex;gap:9px;justify-content:center;margin-top:22px}
+  .dot-btn{width:10px;height:10px;border-radius:50%;border:none;background:#C3D4E4;cursor:pointer;transition:all .2s;padding:0}
+  .dot-btn.active{background:var(--blue);transform:scale(1.25)}
+  .car-arrow{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--navy);cursor:pointer;display:grid;place-items:center;box-shadow:var(--shadow-soft);transition:all .18s}
+  .car-arrow:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .car-prev{left:-58px}.car-next{right:-58px}
+
+  /* careers */
+  .careers{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+  .careers .photo-wrap{position:relative}
+  .careers .photo-wrap .ph{border-radius:24px;overflow:hidden;box-shadow:var(--shadow);aspect-ratio:4/3.4;background:linear-gradient(150deg,var(--ice),var(--sand))}
+  .careers .photo-wrap img{width:100%;height:100%;object-fit:cover}
+  .careers .fc-hiring{right:-14px;top:-16px;animation:floaty 6s ease-in-out infinite}
+
+  /* footer */
+  footer.site{background:var(--navy);color:#B9CBDC;padding:58px 0 116px;font-size:.9rem}
+  .foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:36px;margin-bottom:40px}
+  footer.site h4{color:#fff;font-family:var(--font-display);font-size:.98rem;margin-bottom:14px}
+  footer.site a{color:#B9CBDC;text-decoration:none;display:block;margin-bottom:9px}
+  footer.site a:hover{color:#fff}
+  .foot-bottom{border-top:1px solid rgba(255,255,255,.12);padding-top:22px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:.82rem}
+
+  /* mobile call bar */
+  .callbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:70;background:#fff;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));gap:10px}
+  .callbar .btn{flex:1;padding:13px 10px;font-size:.94rem;border-radius:12px}
+
+  /* chat widget */
+  .chat-fab{position:fixed;right:22px;bottom:22px;z-index:80;width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),var(--navy));color:#fff;box-shadow:0 12px 32px rgba(14,39,64,.35);display:grid;place-items:center;transition:transform .18s}
+  .chat-fab:hover{transform:scale(1.07)}
+  .chat-fab svg{width:28px;height:28px}
+  .chat-fab .ping{position:absolute;inset:0;border-radius:50%;border:2px solid var(--sky);animation:ping 2.6s ease-out infinite}
+  @keyframes ping{0%{transform:scale(1);opacity:.7}80%,100%{transform:scale(1.45);opacity:0}}
+  .chat-panel{position:fixed;right:22px;bottom:98px;z-index:80;width:min(382px,calc(100vw - 24px));height:min(560px,calc(100vh - 132px));background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(14,39,64,.3);display:none;flex-direction:column;overflow:hidden;border:1px solid var(--line)}
+  .chat-panel.open{display:flex}
+  .chat-head{background:linear-gradient(135deg,var(--navy),var(--blue-dark));color:#fff;padding:16px 18px;display:flex;align-items:center;gap:12px}
+  .chat-head .avatar{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center}
+  .chat-head .avatar svg{width:20px;height:20px}
+  .chat-head b{font-family:var(--font-display);font-size:.98rem;display:block;line-height:1.2}
+  .chat-head small{font-size:.76rem;color:#BFD6EA}
+  .chat-close{margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;font-size:1.35rem;line-height:1;padding:4px}
+  .chat-body{flex:1;overflow-y:auto;padding:16px;background:#F6FAFD;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:85%;padding:11px 14px;border-radius:14px;font-size:.92rem;line-height:1.5;animation:pop .22s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .msg.bot{background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;align-self:flex-start}
+  .msg.user{background:var(--blue);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+  .chat-options{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-start}
+  .chat-opt{font:inherit;font-size:.86rem;font-weight:600;color:var(--blue-dark);background:#fff;border:1.5px solid var(--sky);border-radius:999px;padding:8px 14px;cursor:pointer;transition:all .15s}
+  .chat-opt:hover{background:var(--blue);border-color:var(--blue);color:#fff}
+  .chat-form{display:flex;flex-direction:column;gap:8px;align-self:stretch;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+  .chat-form label{font-size:.78rem;font-weight:600;color:var(--slate)}
+  .chat-form input{font:inherit;font-size:.92rem;padding:10px 12px;border:1px solid var(--line);border-radius:9px;width:100%}
+  .chat-form input:focus{outline:2px solid var(--blue);border-color:var(--blue)}
+  .chat-form .btn{padding:11px;border-radius:9px;font-size:.92rem}
+  .chat-note{font-size:.72rem;color:var(--slate);text-align:center;padding:8px 14px;background:#fff;border-top:1px solid var(--line)}
+
+  .chat-composer{display:flex;gap:8px;padding:10px 12px;background:#fff;border-top:1px solid var(--line)}
+  .chat-composer input{flex:1;font:inherit;font-size:.92rem;padding:11px 14px;border:1px solid var(--line);border-radius:999px;background:#F6FAFD}
+  .chat-composer input:focus{outline:2px solid var(--blue);border-color:var(--blue);background:#fff}
+  .send-btn{width:42px;height:42px;border-radius:50%;border:none;background:var(--blue);color:#fff;cursor:pointer;display:grid;place-items:center;flex:none;transition:background .15s,transform .15s}
+  .send-btn:hover{background:var(--blue-dark);transform:scale(1.05)}
+  .send-btn svg{width:18px;height:18px}
+  .typing{display:inline-flex;gap:4px;align-items:center;padding:13px 16px}
+  .typing i{width:7px;height:7px;border-radius:50%;background:#9DB4C8;animation:blink 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1020px){
+    .car-prev{left:-8px}.car-next{right:-8px}
+  }
+  @media (max-width:960px){
+    .hero-grid{grid-template-columns:1fr;gap:40px;padding:52px 0 90px}
+    .collage{min-height:0;margin:0 8px}
+    .collage .main{width:100%}
+    .fc-award{left:-6px;top:-14px}
+    .fc-response{left:-6px;bottom:14%}
+    .fc-review{right:-6px;bottom:-18px}
+    .cards{grid-template-columns:repeat(2,1fr)}
+    .video-grid,.careers{grid-template-columns:1fr}
+    .refer{grid-template-columns:1fr;padding:42px 30px}
+    .stats .wrap{grid-template-columns:repeat(2,1fr);gap:26px 12px}
+    .foot-grid{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:760px){
+    nav.links,.nav-call{display:none}
+    .menu-btn{display:block}
+    section{padding:62px 0}
+    .cards{grid-template-columns:1fr}
+    .promise{flex-direction:column}
+    .slide{padding:32px 24px}
+    .callbar{display:flex}
+    .chat-fab{bottom:86px;right:16px}
+    .chat-panel{bottom:156px;right:12px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#" aria-label="ProHealth Home Care home">
+      <img src="https://prohealth.us/wp-content/uploads/2022/10/Logo-Trancperancy-Web.png" alt="ProHealth Home Care, Inc." onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="logo-fallback">ProHealth Home Care</span>
+    </a>
+    <nav class="links" aria-label="Primary">
+      <a href="#services">Services</a>
+      <a href="#refer">Refer a Patient</a>
+      <a href="#stories">Families</a>
+      <a href="#careers">Careers</a>
+    </nav>
+    <a class="nav-call" href="tel:+18776678770">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg>
+      877.667.8770
+    </a>
+    <button class="menu-btn" aria-label="Open menu">Menu</button>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow reveal in"><span class="dot"></span>Serving Sacramento &amp; surrounding communities</span>
+        <h1>Professional care,<br><em>right at home.</em></h1>
+        <svg class="heartline" viewBox="0 0 340 34" aria-hidden="true">
+          <path d="M2 20 H90 L104 20 L114 6 L126 30 L136 14 L144 20 H338"/>
+        </svg>
+        <p class="lead">ProHealth is a locally owned, Medicare-certified home health and hospice agency delivering clinical excellence and compassion — one patient, one family, one home at a time.</p>
+        <div class="care-finder">
+          <p>Find the right care in under a minute</p>
+          <div class="chips">
+            <button class="chip" onclick="openChat('self')">I need care for myself</button>
+            <button class="chip" onclick="openChat('family')">Caring for a parent or loved one</button>
+            <button class="chip" onclick="openChat('provider')">I'm a provider referring a patient</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="collage">
+        <div class="main">
+          <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=900&q=80" alt="A warm, smiling ProHealth caregiver" loading="eager" onerror="this.remove()">
+        </div>
+        <div class="float-card fc-award">
+          <span class="badge-ring">Top<br>5</span>
+          <div><div class="fc-title">2026 BusinessRate Award</div><div class="fc-sub">Powered by Google Reviews</div></div>
+        </div>
+        <div class="float-card fc-response">
+          <span class="ic-round"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+          <div><div class="fc-title">&lt; 2 hour response</div><div class="fc-sub">To every referral</div></div>
+        </div>
+        <div class="float-card fc-review">
+          <div>
+            <span class="stars" aria-hidden="true">★★★★★</span>
+            <p>"Our team is a God send. We are very satisfied."</p>
+            <div class="fc-sub" style="margin-top:6px">Lizzie L. · Google review</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <svg class="roofline" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,80 L0,56 L520,56 L720,12 L920,56 L1440,56 L1440,80 Z" fill="#FFFFFF"/>
+  </svg>
+</div>
+
+<div class="stats">
+  <div class="wrap">
+    <div class="stat reveal"><b data-count="12">0</b><span>Years serving Sacramento</span></div>
+    <div class="stat reveal d1"><b data-count="4000" data-suffix="+">0</b><span>Patients cared for at home</span></div>
+    <div class="stat reveal d2"><b data-count="4.9" data-decimal="1">0</b><span>Google review rating</span></div>
+    <div class="stat reveal d3"><b data-count="24" data-suffix="/7">0</b><span>On-call clinical support</span></div>
+  </div>
+</div>
+
+<section id="services">
+  <div class="wrap">
+    <p class="kicker reveal">Care. We provide.</p>
+    <h2 class="reveal">Four levels of care, one trusted team</h2>
+    <p class="section-lead reveal">Wherever you are in the journey — recovering, managing a serious illness, or focusing on comfort — the right care meets you at home.</p>
+    <div class="cards">
+      <article class="card reveal">
+        <div class="photo"><img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=700&q=75" alt="Skilled nurse reviewing a patient's home health plan" loading="lazy" onerror="this.remove()"></div>
+        <div class="body">
+          <h3>Home Health</h3>
+          <p>Skilled nursing and physical, occupational and speech therapy at home — because people recover faster where they're most comfortable.</p>
+          <a href="#" onclick="openChat('homehealth');return false;">Learn more →</a>
+        </div>
+      </article>
+      <article class="card reveal d1">
+        <div class="photo"><img src="https://images.unsplash.com/photo-1544027993-37dbfe43562a?auto=format&fit=crop&w=700&q=75" alt="Holding hands with a hospice patient" loading="lazy" onerror="this.remove()"></div>
+        <div class="body">
+          <h3>Hospice Care</h3>
+          <p>Comfort, dignity and symptom relief so patients can live as fully as possible — with support for the whole family.</p>
+          <a href="#" onclick="openChat('hospice');return false;">Learn more →</a>
+        </div>
+      </article>
+      <article class="card reveal d2">
+        <div class="photo"><img src="https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=700&q=75" alt="Clinician providing palliative care guidance" loading="lazy" onerror="this.remove()"></div>
+        <div class="body">
+          <h3>Palliative Care</h3>
+          <p>Relief from the symptoms and stress of serious illness — bridging treatment, home health, and hospice seamlessly.</p>
+          <a href="#" onclick="openChat('palliative');return false;">Learn more →</a>
+        </div>
+      </article>
+      <article class="card reveal d3">
+        <div class="photo"><img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=700&q=75" alt="Caregiver sharing a warm conversation at home" loading="lazy" onerror="this.remove()"></div>
+        <div class="body">
+          <h3>Home Care</h3>
+          <p>Non-medical caregiving — bathing, meals, transfers, companionship — from a few hours a day to 24-hour support.</p>
+          <a href="#" onclick="openChat('homecare');return false;">Learn more →</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="video-sec">
+  <div class="wrap video-grid">
+    <div class="video-frame reveal">
+      <iframe src="https://www.youtube.com/embed/W3oxBep7T5s" title="ProHealth Home Health — see our care in action" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+    <div>
+      <p class="kicker reveal">See it for yourself</p>
+      <h2 class="reveal">Recovery happens faster at home</h2>
+      <p class="section-lead reveal" style="margin-bottom:0">It's a proven fact — and it's why our Home Health program brings the full clinical team to your door.</p>
+      <ul class="checks">
+        <li class="reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Skilled nursing, wound care and medication management</li>
+        <li class="reveal d1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Physical, occupational and speech therapy</li>
+        <li class="reveal d2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Covered by Medicare for qualifying patients</li>
+      </ul>
+      <a class="btn btn-blue reveal d3" href="#" onclick="openChat('homehealth');return false;">Check if you qualify</a>
+    </div>
+  </div>
+</section>
+
+<section id="refer" style="padding-top:70px">
+  <div class="wrap">
+    <div class="refer reveal">
+      <div>
+        <p class="kicker" style="color:var(--sky)">For physicians &amp; discharge planners</p>
+        <h2>Refer a patient in under 60 seconds</h2>
+        <p>Send a referral online or by fax and our intake team takes it from there — insurance verification, scheduling, and a same-day callback to your patient.</p>
+        <div class="promise">
+          <div><b>&lt; 2 hrs</b>Response to every referral</div>
+          <div><b>Same day</b>Patient contact &amp; scheduling</div>
+          <div><b>Medicare</b>Plus major insurance accepted</div>
+        </div>
+      </div>
+      <div class="refer-actions">
+        <a class="btn btn-white" href="#" onclick="openChat('provider');return false;">Start a referral</a>
+        <a class="btn btn-ghost" href="tel:+18776678770">Call intake · 877.667.8770</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="stories" class="alt">
+  <div class="wrap">
+    <div style="text-align:center">
+      <p class="kicker reveal">Clients speak</p>
+      <h2 class="reveal">Trusted by Sacramento families</h2>
+      <p class="section-lead reveal" style="margin:0 auto 46px">Health care is a right, not a privilege. Here's what the families we serve say about their teams.</p>
+    </div>
+    <div class="carousel reveal">
+      <button class="car-arrow car-prev" onclick="moveSlide(-1)" aria-label="Previous testimonial">‹</button>
+      <div class="slides">
+        <div class="track" id="track">
+          <blockquote class="slide">
+            <span class="stars" aria-hidden="true">★★★★★</span>
+            <p>"Very helpful in time of need, no problems or complaints. Our team is a God send. We are very satisfied."</p>
+            <footer>Lizzie L. · Home Health</footer>
+          </blockquote>
+          <blockquote class="slide">
+            <span class="stars" aria-hidden="true">★★★★★</span>
+            <p>"Nurse, PT and OT are excellent — very detailed and pay close attention to my needs. So much better than my previous agency."</p>
+            <footer>Antoinette C. · Home Health</footer>
+          </blockquote>
+          <blockquote class="slide">
+            <span class="stars" aria-hidden="true">★★★★★</span>
+            <p>"Extremely satisfied and very thankful with the Hospice team — that they are there for my mom."</p>
+            <footer>Dorothy N. · Hospice</footer>
+          </blockquote>
+          <blockquote class="slide">
+            <span class="stars" aria-hidden="true">★★★★★</span>
+            <p>"Very impressed! Improving with therapy — OT and PT are really great. Grateful that the care is working out so well."</p>
+            <footer>Dessie F. · Home Health</footer>
+          </blockquote>
+        </div>
+      </div>
+      <button class="car-arrow car-next" onclick="moveSlide(1)" aria-label="Next testimonial">›</button>
+      <div class="dots" id="dots"></div>
+    </div>
+  </div>
+</section>
+
+<section id="careers">
+  <div class="wrap careers">
+    <div class="photo-wrap reveal">
+      <div class="ph"><img src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=900&q=80" alt="A ProHealth clinician ready to make a difference" loading="lazy" onerror="this.remove()"></div>
+      <div class="float-card fc-hiring">
+        <span class="ic-round" style="background:var(--sand);color:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+        <div><div class="fc-title">We're hiring</div><div class="fc-sub">RNs · LVNs · PTs · HHAs</div></div>
+      </div>
+    </div>
+    <div>
+      <p class="kicker reveal">Careers</p>
+      <h2 class="reveal">Your turn to make a move</h2>
+      <p class="section-lead reveal" style="margin-bottom:0">We're looking for people with great attitudes who want to do meaningful work — and enjoy the ride.</p>
+      <ul class="checks">
+        <li class="reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Flexible schedules and a choice of locations</li>
+        <li class="reveal d1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>A culture built around valuing our clinicians</li>
+        <li class="reveal d2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Apply in minutes — upload a resume, we'll call you</li>
+      </ul>
+      <a class="btn btn-blue reveal d3" href="#">Apply now</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <h4>ProHealth Home Care, Inc.</h4>
+        <p style="max-width:32ch">Locally owned home health and hospice agency serving Sacramento, CA and surrounding communities.</p>
+      </div>
+      <div>
+        <h4>Services</h4>
+        <a href="#">Home Health</a><a href="#">Hospice</a><a href="#">Palliative Care</a><a href="#">Home Care</a>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <a href="#">About us</a><a href="#">Careers</a><a href="#">Volunteer</a><a href="#">Contact</a>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <a href="tel:+18776678770">Toll free 877.667.8770</a>
+        <a href="#refer">Refer a patient</a>
+        <a href="#">Facebook · Instagram · LinkedIn</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 ProHealth Home Care, Inc. All rights reserved.</span>
+      <span>Medicare certified · Equal opportunity employer</span>
+    </div>
+  </div>
+</footer>
+
+<!-- Mobile sticky call bar -->
+<div class="callbar">
+  <a class="btn btn-blue" href="tel:+18776678770">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9z"/></svg>
+    Call now
+  </a>
+  <button class="btn" style="color:var(--navy);border:1.5px solid var(--line);background:#fff" onclick="openChat()">Chat with us</button>
+</div>
+
+<!-- Chat widget -->
+<button class="chat-fab" onclick="toggleChat()" aria-label="Open care guide chat">
+  <span class="ping" aria-hidden="true"></span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.4 8.7 8.7 0 0 1-3.6-.8L3 21l1.9-5.7a8.3 8.3 0 0 1-.9-3.8A8.4 8.4 0 0 1 12.5 3a8.4 8.4 0 0 1 8.5 8.5z"/></svg>
+</button>
+
+<div class="chat-panel" id="chatPanel" role="dialog" aria-label="ProHealth Care Guide">
+  <div class="chat-head">
+    <span class="avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+    <div><b>ProHealth Care Guide</b><small>Ask me anything · replies instantly</small></div>
+    <button class="chat-close" onclick="toggleChat()" aria-label="Close chat">×</button>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <form class="chat-composer" onsubmit="return sendFree(event)">
+    <input id="freeInput" placeholder="Type your question…" autocomplete="off" aria-label="Type your question">
+    <button class="send-btn" type="submit" aria-label="Send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+    </button>
+  </form>
+  <div class="chat-note">Your information is only used to connect you with our care team.</div>
+</div>
+
+<script>
+/* ---------- scroll reveals ---------- */
+const io = new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }),{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ---------- count-up stats ---------- */
+const statIo = new IntersectionObserver(es=>es.forEach(e=>{
+  if(!e.isIntersecting) return;
+  const el=e.target, end=parseFloat(el.dataset.count), dec=parseInt(el.dataset.decimal||0), suf=el.dataset.suffix||'';
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){ el.textContent=end.toFixed(dec)+suf; statIo.unobserve(el); return; }
+  const t0=performance.now(), dur=1400;
+  (function tick(t){ const p=Math.min((t-t0)/dur,1), ease=1-Math.pow(1-p,3);
+    el.textContent=(end*ease).toFixed(dec)+suf;
+    if(p<1) requestAnimationFrame(tick); })(t0);
+  statIo.unobserve(el);
+}),{threshold:.6});
+document.querySelectorAll('.stat b').forEach(el=>statIo.observe(el));
+
+/* ---------- testimonial carousel ---------- */
+let slideIdx=0, slideCount=4, autoTimer;
+const track=document.getElementById('track'), dotsWrap=document.getElementById('dots');
+for(let i=0;i<slideCount;i++){ const d=document.createElement('button'); d.className='dot-btn'+(i?'':' active'); d.setAttribute('aria-label','Go to testimonial '+(i+1)); d.onclick=()=>goSlide(i); dotsWrap.appendChild(d); }
+function goSlide(i){ slideIdx=(i+slideCount)%slideCount; track.style.transform=`translateX(-${slideIdx*100}%)`;
+  dotsWrap.querySelectorAll('.dot-btn').forEach((d,k)=>d.classList.toggle('active',k===slideIdx)); restartAuto(); }
+function moveSlide(dir){ goSlide(slideIdx+dir); }
+function restartAuto(){ clearInterval(autoTimer);
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches) autoTimer=setInterval(()=>goSlide(slideIdx+1),6000); }
+restartAuto();
+/* swipe support */
+let touchX=null;
+track.addEventListener('touchstart',e=>touchX=e.touches[0].clientX,{passive:true});
+track.addEventListener('touchend',e=>{ if(touchX===null) return; const dx=e.changedTouches[0].clientX-touchX;
+  if(Math.abs(dx)>40) moveSlide(dx<0?1:-1); touchX=null; },{passive:true});
+
+/* ============================================================
+   ProHealth Care Guide — hybrid chatbot (prototype)
+   1) Guided buttons for zero-typing journeys
+   2) Free-text questions → keyword intent engine (instant, free,
+      never off-script clinically)
+   3) Unmatched questions → AI fallback (Claude API, works when
+      previewed inside Claude) → else graceful callback offer
+   In production, leads POST to your always-on endpoint
+   (Cloudflare Worker → D1 + routed email), then sync to the
+   admin dashboard on your PC.
+   ============================================================ */
+const SERVICES = {
+  homehealth: {label:"Home Health", info:"Home Health brings skilled nursing, physical, occupational and speech therapy to you at home. It's typically ordered by a physician and covered by Medicare when you qualify. Visits are scheduled around your recovery plan."},
+  hospice:    {label:"Hospice Care", info:"Hospice focuses on comfort, dignity and quality of life — managing pain and symptoms at home, with emotional and spiritual support for the whole family. It's fully covered by Medicare for eligible patients."},
+  palliative: {label:"Palliative Care", info:"Palliative care provides relief from the symptoms and stress of serious illness at any stage — alongside your existing treatment. Our program bridges home health and hospice for seamless continuity."},
+  homecare:   {label:"Home Care", info:"Home Care is non-medical support: bathing, dressing, meals, transfers and companionship — from a few hours a day to 24-hour care. It's private-pay and fully customizable."}
+};
+
+const KB = [
+  {keys:['insurance','medicare','medi-cal','coverage','covered','cost','price','pay','expensive','afford','free'],
+   a:"Home Health and Hospice are typically covered 100% by Medicare for qualifying patients — most families pay nothing out of pocket. We also work with major insurance plans. Home Care (non-medical caregiving) is private-pay. Our intake team verifies your exact coverage for free before care begins."},
+  {keys:['qualify','eligible','eligibility','requirement','homebound','criteria'],
+   a:"For Home Health, you generally need a physician's order and to be considered 'homebound' — leaving home takes considerable effort. For Hospice, a physician certifies eligibility. The fastest way to know for sure is a quick call with our intake team; they can usually tell you in minutes."},
+  {keys:['area','areas','where','serve','sacramento','zip','city','location','county'],
+   a:"We serve Sacramento and the greater Sacramento area, including North Sacramento and surrounding communities. Share your zip code with our intake team and they'll confirm coverage right away."},
+  {keys:['hour','hours','open','phone','number','contact','reach','emergency','24/7','after hours'],
+   a:"You can reach us toll free at 877.667.8770. Clinical support is on call 24/7 for our patients, and our intake team responds to new inquiries the same day."},
+  {keys:['job','jobs','career','careers','hiring','vacancy','apply','resume','recruit','rn ','lvn','aide position'],
+   a:"We're hiring — RNs, LVNs, PTs, OTs and Home Health Aides, with flexible schedules and a culture that values clinicians. You can apply in minutes on our Careers page, or leave your details here and our recruiter will call you.", cta:'careers'},
+  {keys:['refer','referral','fax','discharge planner','physician referral'], action:'provider'},
+  {keys:['difference','versus',' vs ','hospice or palliative','palliative or hospice'],
+   a:"The short version: Palliative care provides comfort and symptom relief at any stage of a serious illness, alongside curative treatment. Hospice provides that same comfort-focused care when treatment is no longer the goal — usually in the final months. Our team helps families decide which is right, with no pressure."},
+  {keys:['home health','skilled nursing','wound','physical therapy','occupational therapy','speech therapy','rehab'], a:SERVICES.homehealth.info, svc:'Home Health'},
+  {keys:['hospice','end of life','comfort care','terminal'], a:SERVICES.hospice.info, svc:'Hospice Care'},
+  {keys:['palliative'], a:SERVICES.palliative.info, svc:'Palliative Care'},
+  {keys:['home care','caregiver','companion','bathing','meal','24-hour','sitter','non-medical'], a:SERVICES.homecare.info, svc:'Home Care'},
+  {keys:['volunteer'],
+   a:"Our Hospice program welcomes volunteers for companionship and family support — it's deeply meaningful work. Leave your details and our volunteer coordinator will reach out, or call 877.667.8770."},
+  {keys:['start','begin','next step','sign up','get care','how do i','enroll'],
+   a:"Getting started is simple: a quick call with our intake team, we verify insurance and physician orders, and care typically begins within days."},
+  {keys:['thank','thanks','bye','goodbye'],
+   a:"You're so welcome. We're here whenever you need us — 877.667.8770. Take care!", noCta:true},
+  {keys:['hi','hello','hey','good morning','good afternoon'],
+   a:"Hello! Ask me anything about our services, Medicare coverage, or how to get started — or tap one of the options above.", noCta:true}
+];
+
+let leads = [], leadDraft = {};
+const body = () => document.getElementById('chatBody');
+const panel = () => document.getElementById('chatPanel');
+
+function toggleChat(){ panel().classList.toggle('open'); if(panel().classList.contains('open') && !body().hasChildNodes()) startFlow(); }
+function openChat(ctx){ panel().classList.add('open'); body().innerHTML=''; startFlow(ctx); }
+function addMsg(text, who='bot'){ const m=document.createElement('div'); m.className='msg '+who; m.textContent=text; body().appendChild(m); body().scrollTop=body().scrollHeight; return m; }
+function addTyping(){ const t=document.createElement('div'); t.className='msg bot typing'; t.innerHTML='<i></i><i></i><i></i>'; body().appendChild(t); body().scrollTop=body().scrollHeight; return t; }
+function addOptions(opts){
+  const w=document.createElement('div'); w.className='chat-options';
+  opts.forEach(o=>{ const b=document.createElement('button'); b.className='chat-opt'; b.textContent=o.label;
+    b.onclick=()=>{ w.remove(); addMsg(o.label,'user'); o.action(); }; w.appendChild(b); });
+  body().appendChild(w); body().scrollTop=body().scrollHeight;
+}
+
+function startFlow(ctx){
+  addMsg("Hi! I'm the ProHealth Care Guide. Tap an option below, or just type your question — Medicare, costs, eligibility, anything.");
+  if(ctx==='provider') return providerFlow();
+  if(ctx && SERVICES[ctx]) return serviceInfo(ctx);
+  if(ctx==='self') addMsg("Let's find the right care for you. Which of these sounds closest?");
+  else if(ctx==='family') addMsg("You're in the right place. Which of these sounds closest to what your loved one needs?");
+  addOptions([
+    ...Object.entries(SERVICES).map(([k,v])=>({label:v.label, action:()=>serviceInfo(k)})),
+    {label:"I'm a provider referring a patient", action:providerFlow}
+  ]);
+}
+
+function serviceInfo(key){
+  const s=SERVICES[key]; leadDraft={service:s.label};
+  addMsg(s.info);
+  addMsg("Would you like our care team to call you? It's free, and there's no obligation.");
+  addOptions([
+    {label:"Yes, request a callback", action:()=>leadForm('callback')},
+    {label:"Ask about another service", action:()=>{ addMsg("Sure — which one?"); addOptions(Object.entries(SERVICES).map(([k,v])=>({label:v.label, action:()=>serviceInfo(k)}))); }},
+    {label:"I'll just call: 877.667.8770", action:()=>addMsg("Perfect — we're available toll free at 877.667.8770. Talk soon!")}
+  ]);
+}
+
+function providerFlow(){
+  leadDraft={service:"Provider referral"};
+  addMsg("Thank you for thinking of ProHealth. Our intake team responds to every referral within 2 hours, with same-day patient contact.");
+  addMsg("Leave your details and the best number, and intake will call you right back — or call us directly at 877.667.8770.");
+  leadForm('referral');
+}
+
+/* ---------- free-text handling ---------- */
+function matchIntent(text){
+  const t = ' ' + text.toLowerCase().replace(/[^a-z0-9\s\/-]/g,' ') + ' ';
+  let best=null, bestScore=0;
+  for(const item of KB){
+    let score=0;
+    for(const k of item.keys){
+      if(k.length<=3){ if(new RegExp('\\b'+k.trim()+'\\b').test(t)) score+=1; }
+      else if(t.includes(k)) score+=2;
+    }
+    if(score>bestScore){ bestScore=score; best=item; }
+  }
+  return bestScore>0 ? best : null;
+}
+
+function sendFree(e){
+  e.preventDefault();
+  const input=document.getElementById('freeInput');
+  const text=input.value.trim();
+  if(!text) return false;
+  panel().classList.add('open');
+  addMsg(text,'user'); input.value='';
+  document.querySelectorAll('.chat-options').forEach(el=>el.remove());
+  const typing=addTyping();
+  setTimeout(()=>{ typing.remove(); routeFree(text); }, 550);
+  return false;
+}
+
+function routeFree(text){
+  const hit = matchIntent(text);
+  if(hit){
+    if(hit.action==='provider') return providerFlow();
+    if(hit.svc) leadDraft={service:hit.svc};
+    addMsg(hit.a);
+    if(!hit.noCta){
+      addOptions([
+        {label: hit.cta==='careers' ? "Have a recruiter call me" : "Request a callback",
+         action:()=>{ if(hit.cta==='careers') leadDraft={service:"Careers inquiry"}; leadForm('callback'); }},
+        {label:"Ask another question", action:()=>addMsg("Go ahead — I'm listening.")}
+      ]);
+    }
+    return;
+  }
+  aiFallback(text);
+}
+
+async function aiFallback(text){
+  const typing=addTyping();
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-6",
+        max_tokens:1000,
+        messages:[{role:"user", content:
+          "You are the ProHealth Care Guide, a friendly assistant on the website of ProHealth Home Care, Inc., a locally owned, Medicare-certified home health and hospice agency serving Sacramento, CA. Services: Home Health (skilled nursing, PT/OT/speech therapy at home, Medicare-covered when qualifying), Hospice (comfort-focused end-of-life care, Medicare-covered), Palliative Care (symptom relief alongside treatment), Home Care (private-pay non-medical caregiving). Toll free: 877.667.8770. Referrals answered within 2 hours. Answer the visitor's question warmly in under 60 words. Never give medical advice or diagnoses — for anything clinical or uncertain, suggest calling 877.667.8770. Visitor's question: " + text}]
+      })
+    });
+    const data = await response.json();
+    const reply = (data.content||[]).map(i=>i.type==="text"?i.text:"").join("").trim();
+    typing.remove();
+    if(!reply) throw new Error("empty");
+    addMsg(reply);
+    addOptions([
+      {label:"Request a callback", action:()=>leadForm('callback')},
+      {label:"Ask another question", action:()=>addMsg("Go ahead — I'm listening.")}
+    ]);
+  }catch(err){
+    typing.remove();
+    addMsg("That's a great question, and I want to make sure you get exactly the right answer. Our care team can help directly — want a quick callback? Or call us anytime at 877.667.8770.");
+    addOptions([
+      {label:"Yes, request a callback", action:()=>leadForm('callback')},
+      {label:"I'll call instead", action:()=>addMsg("Perfect — 877.667.8770, toll free. Talk soon!")}
+    ]);
+  }
+}
+
+/* ---------- lead capture ---------- */
+function leadForm(kind){
+  const f=document.createElement('form'); f.className='chat-form';
+  f.innerHTML=`
+    <label for="cf-name">Your name</label>
+    <input id="cf-name" required autocomplete="name" placeholder="Full name">
+    <label for="cf-phone">Phone number</label>
+    <input id="cf-phone" required type="tel" autocomplete="tel" placeholder="(555) 555-5555">
+    <button class="btn btn-blue" type="submit">${kind==='referral'?'Send to intake team':'Request my callback'}</button>`;
+  f.onsubmit=(e)=>{
+    e.preventDefault();
+    const lead={ ...leadDraft, name:f.querySelector('#cf-name').value, phone:f.querySelector('#cf-phone').value,
+                 type:kind, page:location.pathname, ts:new Date().toISOString() };
+    leads.push(lead);
+    console.log('LEAD CAPTURED (POST to /api/leads in production):', lead);
+    f.remove();
+    addMsg(`${lead.name} · ${lead.phone}`,'user');
+    addMsg(kind==='referral'
+      ? "Got it — your referral request is with our intake team. Expect a call within 2 hours during business hours. Thank you!"
+      : `Thank you, ${lead.name.split(' ')[0]}! Our care team will call you shortly about ${leadDraft.service||'your inquiry'}. If it's urgent, call 877.667.8770 anytime.`);
+  };
+  body().appendChild(f); body().scrollTop=body().scrollHeight;
+  f.querySelector('#cf-name').focus();
+}
+
+</script>
+</body>
+</html>
