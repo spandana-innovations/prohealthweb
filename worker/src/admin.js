@@ -44,17 +44,37 @@ header img{height:30px;width:auto}
 .help{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);
   color:#CFE4F3;cursor:pointer;display:grid;place-items:center;flex:none;padding:0;transition:all .15s}
 .help:hover{background:rgba(255,255,255,.24);color:#fff}
+.help.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .help svg{width:15px;height:15px}
-/* help document (in the modal) */
-.help-doc{padding:22px 26px;background:#fff;height:100%;overflow:auto;color:var(--ink)}
-.help-doc>*{max-width:760px;margin-left:auto;margin-right:auto}
-.help-lead{font-size:.95rem;color:var(--slate);line-height:1.6;margin-bottom:4px}
-.help-doc h3{font-family:var(--display);font-size:1.06rem;color:var(--navy);margin:20px 0 8px;padding-top:16px;border-top:1px solid var(--line)}
-.help-doc h3 svg{width:18px;height:18px;color:var(--blue);vertical-align:-3px;margin-right:5px}
-.help-doc p{font-size:.9rem;line-height:1.65;margin:6px 0}
-.help-doc ul{margin:6px 0;padding-left:20px}
-.help-doc li{font-size:.9rem;line-height:1.6;margin:5px 0}
-.help-foot{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);color:var(--slate);font-size:.85rem}
+/* top-bar icon buttons (settings, admins) */
+.topbtn{width:32px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);
+  color:#CFE4F3;cursor:pointer;display:grid;place-items:center;flex:none;padding:0;transition:all .15s}
+.topbtn:hover{background:rgba(255,255,255,.22);color:#fff}
+.topbtn.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.topbtn svg{width:16px;height:16px}
+.topbtn[hidden]{display:none}
+/* small copyright, no footer bar */
+.copyr{text-align:center;font-size:.72rem;color:var(--slate);padding:16px 12px 28px}
+/* help wiki */
+.wiki{display:grid;grid-template-columns:244px 1fr;gap:18px;align-items:start}
+.wiki-side{position:sticky;top:74px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;max-height:calc(100vh - 96px);overflow:auto}
+.wiki-search{display:flex;align-items:center;gap:7px;background:var(--g50);border:1px solid var(--g200);border-radius:9px;padding:7px 10px;margin-bottom:8px}
+.wiki-search .wsi{display:inline-flex;color:var(--slate)}.wiki-search .wsi svg{width:15px;height:15px}
+.wiki-search input{border:none;outline:none;background:transparent;flex:1;font:inherit;font-size:.86rem}
+.wiki-cat{font-family:var(--nav);font-size:.63rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin:12px 4px 4px}
+.wiki-link{display:block;padding:7px 9px;border-radius:8px;font-size:.85rem;color:var(--ink);cursor:pointer;line-height:1.35}
+.wiki-link:hover{background:var(--ice)}
+.wiki-link.on{background:var(--blue);color:#fff;font-weight:600}
+.wiki-none{font-size:.83rem;color:var(--slate);padding:8px 4px}
+.wiki-main{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px 28px;min-height:340px}
+.wiki-cat-tag{font-family:var(--nav);font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
+.wiki-main h2{font-family:var(--display);font-size:1.32rem;color:var(--navy);margin:4px 0 12px}
+.wiki-main p{font-size:.92rem;line-height:1.65;margin:9px 0;color:var(--ink)}
+.wiki-main ul,.wiki-main ol{margin:9px 0 9px 2px;padding-left:22px}
+.wiki-main li{font-size:.92rem;line-height:1.6;margin:6px 0}
+.wiki-main b.g{color:#2F7A63}.wiki-main b.r{color:#C0392B}
+.wl{color:var(--blue-dark);cursor:pointer;text-decoration:underline}
+@media(max-width:720px){.wiki{grid-template-columns:1fr}.wiki-side{position:static;max-height:none}}
 header .sp{margin-left:auto;display:flex;align-items:center;gap:9px}
 .clock{font-family:var(--nav);display:inline-flex;flex-direction:column;align-items:flex-end;line-height:1.08;
   background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);padding:4px 11px;border-radius:10px;color:#fff}
@@ -76,7 +96,7 @@ header .sp{margin-left:auto;display:flex;align-items:center;gap:9px}
 .out:hover{background:rgba(255,255,255,.22);color:#fff}
 .out svg{width:16px;height:16px}
 nav.tabs{position:sticky;top:62px;z-index:29;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--line);display:flex;gap:2px;padding:0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  border-bottom:1px solid var(--line);display:flex;justify-content:center;gap:2px;padding:0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 nav.tabs button{flex:none;font:inherit;font-family:var(--nav);font-weight:600;font-size:.85rem;color:var(--slate);
   background:none;border:none;border-bottom:2.5px solid transparent;padding:14px 13px;cursor:pointer;white-space:nowrap;
   display:inline-flex;align-items:center;gap:7px;transition:color .15s}
@@ -324,6 +344,8 @@ a.tel:hover{text-decoration:underline}
   <button class="help" id="help" title="How to use this dashboard" aria-label="Help"></button>
   <div class="sp">
     <span class="clock" id="clock" title="Current Pacific time"><b><span class="sdot" id="sdot"></span><span id="clockTx">--:--:--</span></b><span class="clbl" id="clbl">ProHealth PST Time</span></span>
+    <button class="topbtn" id="tbSettings" title="Settings" aria-label="Settings"></button>
+    <button class="topbtn" id="tbAdmins" title="Admin accounts" aria-label="Admin accounts" hidden></button>
     <span class="who" id="who"></span>
     <button class="out" id="out" title="Sign out" aria-label="Sign out">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
@@ -333,6 +355,7 @@ a.tel:hover{text-decoration:underline}
 
 <nav class="tabs" id="tabs"></nav>
 <main id="view"><div class="empty"><span class="spin"></span></div></main>
+<div class="copyr">&copy; 2026 ProHealth Home Care, Inc.</div>
 
 <div class="modal" id="modal" hidden>
   <div class="modal-bd" onclick="closeModal()"></div>
@@ -384,9 +407,12 @@ const ago = (iso) => { const d = D(iso); if(!d) return '';
 let TAB = 'overview', DATA = {leads:[],applications:[],data_requests:[]}, C = {}, Q = '';
 let F = { leads:{status:'all',type:'all'}, contacts:{status:'all'}, callbacks:{status:'all'}, applications:{status:'all',role:'All',office:'All',resume:'all'}, requests:{status:'all',due:'all'} };
 function tabList(){
-  const t = [['overview','Overview','home'],['leads','Leads','users'],['callbacks','Callbacks','phone'],['contacts','Contacts','mail'],
-             ['applications','Applicants','brief'],['openings','Openings','list'],['requests','Data requests','lock'],['settings','Settings','cog']];
-  if (DATA.super) { t.push(['admins','Admins','users']); t.push(['audit','Activity','doc']); }
+  // Arranged by use case: the daily enquiry queues first, then careers, then
+  // the owner-only activity log. Settings & Admins live in the top bar.
+  const t = [['overview','Overview','home'],['leads','Leads','users'],['callbacks','Callbacks','phone'],
+             ['contacts','Contacts','mail'],['applications','Applicants','brief'],['requests','Data requests','lock'],
+             ['openings','Openings','list']];
+  if (DATA.super) t.push(['audit','Activity','doc']);
   return t;
 }
 
@@ -403,6 +429,13 @@ function paintTabs(){
   }).join('');
   Array.prototype.forEach.call($('tabs').querySelectorAll('button'), function(b){
     b.onclick = function(){ TAB = b.dataset.t; Q = ''; paintTabs(); render(); };
+  });
+  paintTopbar();
+}
+function paintTopbar(){
+  const ta = $('tbAdmins'); if (ta) ta.hidden = !DATA.super;
+  [['tbSettings','settings'],['tbAdmins','admins'],['help','help']].forEach(function(p){
+    const el = $(p[0]); if (el) el.classList.toggle('on', TAB === p[1]);
   });
 }
 
@@ -1096,6 +1129,7 @@ async function saveCfg(){
 }
 
 function render(){
+  if (TAB === 'help') return renderHelp();
   if (TAB === 'overview') return renderOverview();
   if (TAB === 'openings') return renderOpenings();
   if (TAB === 'settings') return renderSettings();
@@ -1123,73 +1157,91 @@ function openResume(key){
 function closeModal(){ $('modal').hidden = true; $('modalBody').innerHTML = ''; document.body.style.overflow = ''; }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
 
-/* ---------------- help ---------------- */
-function openHelp(){
-  $('modalTitle').textContent = 'Help — using the ProHealth dashboard';
-  $('modalOpen').style.display = 'none';
-  $('modalBody').innerHTML = '<div class="help-doc">' + helpHTML() + '</div>';
-  $('modal').hidden = false; document.body.style.overflow = 'hidden';
+/* ---------------- help (wiki) ---------------- */
+function openHelp(){ go('help'); }
+const HELP_CATS = ['Getting started','Daily work','How-to tasks','Configuration'];
+const HELP_ARTICLES = [
+  {id:'welcome', cat:'Getting started', title:'What this dashboard is', kw:'intro start enquiries leads home',
+   body:'<p>This is where every enquiry from the ProHealth website lands &mdash; phone callbacks, contact messages, provider referrals, job applications and privacy requests. Nothing waits in an inbox; it all arrives here the moment someone submits. Use the centred menu to move between queues, and this Help page any time you are unsure.</p>'},
+  {id:'topbar', cat:'Getting started', title:'The top bar and open/closed clock', kw:'clock time open closed hours pst sign out logout settings admin',
+   body:'<p>The clock shows the current Pacific time. Its dot is <b class="g">green when the office is open</b> and <b class="r">red when closed</b> &mdash; when closed it also shows how long until opening, from your office hours and holidays.</p><p>Beside it are the <b>Settings</b> cog and, for owners, the <b>Admin accounts</b> icon, then your name and the <b>sign-out</b> button. You are signed out automatically after 8 hours.</p>'},
+  {id:'nav', cat:'Getting started', title:'Finding your way around', kw:'tabs menu navigate sections help',
+   body:'<p>The centred menu holds your daily queues: Overview, Leads, Callbacks, Contacts, Applicants, Data requests and Openings. Settings and Admin accounts are icons in the top bar. Click the <b>?</b> next to the ProHealth logo to come back to Help.</p>'},
+
+  {id:'queues', cat:'Daily work', title:'Leads, Callbacks and Contacts', kw:'leads callbacks contacts enquiries messages referrals',
+   body:'<p>Enquiries are split so nothing gets lost:</p><ul><li><b>Leads</b> &mdash; general enquiries and provider referrals.</li><li><b>Callbacks</b> &mdash; people who asked to be called back.</li><li><b>Contacts</b> &mdash; messages from the website contact form.</li></ul><p>Each card shows the name, phone (tap to call), email (tap to write) and message, with a status dropdown and a notes box.</p>'},
+  {id:'applicants', cat:'Daily work', title:'Applicants and résumés', kw:'applicants jobs careers resume cv applications',
+   body:'<p>Job applications, with role, office, licence and résumé. Filter by role, office, or whether a résumé is attached. See <a class="wl" onclick="wikiOpen(\\'howto-resume\\')">How to view a résumé</a>.</p>'},
+  {id:'privacy', cat:'Daily work', title:'Data (privacy) requests', kw:'data privacy ccpa delete erase request compliance',
+   body:'<p>Privacy requests under California law. Each shows a reference, the request type and a <b>due-by date</b> &mdash; overdue ones are flagged red. The request record is always kept as proof you complied. See <a class="wl" onclick="wikiOpen(\\'howto-erase\\')">How to fulfil a deletion request</a>.</p>'},
+  {id:'records', cat:'Daily work', title:'Edit, archive and delete', kw:'edit archive delete remove correct records',
+   body:'<p>Every record in any list has three actions at the bottom: <b>Edit</b> (correct details in a pop-up), <b>Archive</b> (hide without deleting), and <b>Delete</b> (remove permanently, after a confirm).</p>'},
+
+  {id:'howto-status', cat:'How-to tasks', title:'How to update a status', kw:'status new contacted converted closed dropdown change',
+   body:'<ol><li>Open the queue and find the card.</li><li>Use the <b>status dropdown</b> at the top-right of the card.</li><li>Pick New, Contacted, Converted or Closed. It saves instantly and the counts update.</li></ol>'},
+  {id:'howto-note', cat:'How-to tasks', title:'How to add notes', kw:'notes comment write save automatically',
+   body:'<ol><li>Open the card.</li><li>Type in the <b>notes box</b> at the bottom.</li><li>Notes save automatically a moment after you stop typing &mdash; there is no button to press.</li></ol>'},
+  {id:'howto-search', cat:'How-to tasks', title:'How to search and filter', kw:'search filter find status role office archived',
+   body:'<ol><li>Use the <b>search box</b> at the top of a list to match a name, phone or email.</li><li>Use the <b>status</b> chips to narrow by stage; pick <b>Archived</b> to see archived items.</li><li>Applicants also filter by role, office and résumé.</li></ol>'},
+  {id:'howto-contact-move', cat:'How-to tasks', title:'How to move a contact to Leads or Applicants', kw:'contact push move promote lead applicant triage',
+   body:'<ol><li>Open the <b>Contacts</b> tab and find the message.</li><li>On the card, click <b>Push to Leads</b> to treat it as a lead, or <b>Push to Applicants</b> if the person is job-hunting.</li><li>It moves to that tab and you are taken there to continue.</li></ol>'},
+  {id:'howto-resume', cat:'How-to tasks', title:'How to view a résumé', kw:'resume cv pdf preview download applicant open',
+   body:'<ol><li>Open the <b>Applicants</b> tab.</li><li>On a card with a résumé, click <b>Résumé</b>.</li><li>The PDF opens in a pop-up. Use <b>Open in new tab</b> to save it, or press Esc to close.</li></ol>'},
+  {id:'howto-erase', cat:'How-to tasks', title:'How to fulfil a deletion request', kw:'erase delete data privacy ccpa fulfil find comply',
+   body:'<ol><li>Open <b>Data requests</b> and the relevant card.</li><li>Click <b>Find their data</b> to see everything held on that person.</li><li>Tick what to remove and click <b>Erase permanently</b>.</li><li>Reply to the person, then mark the request <b>Converted</b>. The request record stays as your evidence.</li></ol>'},
+  {id:'howto-archive', cat:'How-to tasks', title:'How to archive, unarchive or delete', kw:'archive unarchive delete remove hide restore',
+   body:'<ol><li>On any card, use the buttons at the bottom.</li><li><b>Archive</b> hides it; find it again with the <b>Archived</b> status filter and click <b>Unarchive</b>.</li><li><b>Delete</b> removes it for good after a confirmation.</li></ol>'},
+  {id:'howto-export', cat:'How-to tasks', title:'How to export a list to CSV', kw:'export csv download spreadsheet excel',
+   body:'<ol><li>Open the list and apply any filters or search you want.</li><li>Click <b>CSV</b> at the top.</li><li>A spreadsheet of exactly what you are viewing downloads.</li></ol>'},
+
+  {id:'openings', cat:'Configuration', title:'Publishing job openings', kw:'openings jobs careers publish roles offices website',
+   body:'<ol><li>Open the <b>Openings</b> tab.</li><li>Add a role, write a one-line summary, and tick the offices it applies to.</li><li>Toggle a role off to hide it without deleting.</li><li>Click <b>Save and publish</b> &mdash; the careers page updates within a minute.</li></ol>'},
+  {id:'set-email', cat:'Configuration', title:'Where enquiries are emailed', kw:'settings email routing inbox forward from address',
+   body:'<ol><li>Open <b>Settings</b> (the cog in the top bar).</li><li>Under <b>Where leads are emailed</b>, set the inbox for each kind of enquiry.</li><li>Leave one blank to use the default. Separate multiple addresses with commas.</li><li>Click <b>Save routing</b>.</li></ol>'},
+  {id:'set-hours', cat:'Configuration', title:'Setting office hours', kw:'settings hours open close time clock pacific',
+   body:'<ol><li>Open <b>Settings</b>.</li><li>Set the <b>Opens</b> and <b>Closes</b> times (Pacific).</li><li>Click <b>Save hours</b>. These drive the open/closed clock, the chatbot and the footer.</li></ol>'},
+  {id:'set-holidays', cat:'Configuration', title:'Holidays and closures', kw:'settings holidays closures federal observed weekend shift',
+   body:'<ol><li>Open <b>Settings</b> and scroll to <b>Holidays &amp; office closures</b>.</li><li>Add a day, or click <b>Load US federal holidays</b> for a whole year.</li><li>If a holiday lands on a weekend, tap the amber button to shift it to the observed weekday.</li><li>Check the <b>Observed closures</b> list, then click <b>Save closures</b>.</li></ol>'},
+];
+let WIKI_SEL = 'welcome';
+function renderHelp(){
+  $('view').innerHTML = '<div class="wiki">'
+    + '<aside class="wiki-side"><div class="wiki-search"><span class="wsi">' + I.search + '</span>'
+    + '<input id="wikiq" placeholder="Search help" autocomplete="off" oninput="wikiSearch()"></div>'
+    + '<nav id="wikiIndex"></nav></aside>'
+    + '<section class="wiki-main" id="wikiMain"></section></div>';
+  paintWikiIndex('');
+  wikiOpen(WIKI_SEL);
 }
-function helpHTML(){
-  return ''
-  + '<p class="help-lead">This dashboard is where every enquiry from the ProHealth website lands — phone callbacks, contact messages, provider referrals, job applications and privacy requests. Nothing waits in an inbox: it all arrives here the moment someone hits submit. Here is how each part works.</p>'
-
-  + '<h3>' + I.clock + 'The top bar</h3>'
-  + '<ul>'
-  + '<li><b>The clock</b> shows the current Pacific time. Its dot is <b style="color:#2F7A63">green when the office is open</b> and <b style="color:#C0392B">red when closed</b> — when closed it also tells you how long until opening (e.g. &ldquo;opens in 2h 30m&rdquo;), based on your office hours and holiday closures.</li>'
-  + '<li><b>Your name</b> appears next to it, and the <b>sign-out</b> button is on the far right. You are signed out automatically after 8 hours.</li>'
-  + '</ul>'
-
-  + '<h3>' + I.home + 'Overview</h3>'
-  + '<p>Your landing page: how many new items need attention, anything overdue, and the latest activity. Click any stat to jump straight to that list.</p>'
-
-  + '<h3>' + I.users + 'Leads, ' + I.phone + 'Callbacks &amp; ' + I.mail + 'Contacts</h3>'
-  + '<p>Enquiries are split into three tabs so nothing gets lost:</p>'
-  + '<ul>'
-  + '<li><b>Leads</b> — general enquiries and provider referrals.</li>'
-  + '<li><b>Callbacks</b> — people who asked to be called back (from the chatbot or homepage).</li>'
-  + '<li><b>Contacts</b> — messages from the website contact form.</li>'
-  + '</ul>'
-  + '<p>Each card shows the name, phone (tap to call), email (tap to write) and message. On every card you can:</p>'
-  + '<ul>'
-  + '<li>Set a <b>status</b> — New → Contacted → Converted → Closed — from the dropdown. New items are highlighted.</li>'
-  + '<li>Type <b>notes</b> — they save automatically as you type.</li>'
-  + '<li><b>Search</b> the top box (name, phone, email) and <b>filter</b> by status. Use <b>CSV</b> to export what you are viewing.</li>'
-  + '</ul>'
-  + '<p><b>On a Contact</b>, two extra buttons let you <b>Push to Leads</b> (treat it as a lead) or <b>Push to Applicants</b> (if it turns out to be someone looking for a job).</p>'
-
-  + '<h3>' + I.brief + 'Applicants</h3>'
-  + '<p>Job applications, with role, office, licence and résumé. Click <b>Résumé</b> to preview the PDF right here in a pop-up — no download needed. Filter by role, office, or whether a résumé is attached.</p>'
-
-  + '<h3>' + I.lock + 'Data requests</h3>'
-  + '<p>Privacy requests (CCPA). Each shows a reference, the request type and a <b>due-by date</b> — overdue ones are flagged red. To action a deletion, open the card, click <b>Find their data</b> to see everything held on that person, then <b>Erase permanently</b>. The request itself is kept on purpose as your proof of compliance.</p>'
-
-  + '<h3>' + I.check + 'Editing, archiving &amp; deleting</h3>'
-  + '<p>Every record (in any list) has three actions at the bottom:</p>'
-  + '<ul>'
-  + '<li><b>Edit</b> — correct a name, phone, email or other details in a pop-up form.</li>'
-  + '<li><b>Archive</b> — tuck it away without deleting. Archived items are hidden until you pick the <b>Archived</b> status filter, where you can <b>Unarchive</b> them.</li>'
-  + '<li><b>Delete</b> — remove it permanently (asks you to confirm).</li>'
-  + '</ul>'
-
-  + '<h3>' + I.list + 'Openings</h3>'
-  + '<p>Manage the jobs shown on the careers page. Add a role, write a one-line summary, tick which offices it applies to, and toggle it on or off. Click <b>Save and publish</b> — the website updates within a minute, no developer needed.</p>'
-
-  + '<h3>' + I.cog + 'Settings</h3>'
-  + '<ul>'
-  + '<li><b>Where leads are emailed</b> — set which inbox each kind of enquiry is forwarded to. Leave one blank to use the default.</li>'
-  + '<li><b>Office hours</b> — set opening and closing times (Pacific). These drive the open/closed clock, the chatbot and the footer.</li>'
-  + '<li><b>Holidays &amp; closures</b> — add the days the office is closed. Use <b>Load US federal holidays</b> to fill a whole year at once. If a holiday lands on a weekend, tap the amber button to shift it to the observed weekday. The <b>Observed closures</b> list shows exactly which days you will be closed.</li>'
-  + '</ul>'
-
-  + '<p class="help-foot">Stuck on something not covered here? Call the office line and ask for whoever set this up.</p>';
+function paintWikiIndex(q){
+  const el = $('wikiIndex'); if(!el) return;
+  q = (q||'').toLowerCase().trim();
+  let html = '';
+  HELP_CATS.forEach(function(cat){
+    const arts = HELP_ARTICLES.filter(function(a){ return a.cat===cat && (!q || (a.title+' '+a.kw).toLowerCase().indexOf(q)>-1); });
+    if(!arts.length) return;
+    html += '<div class="wiki-cat">' + esc(cat) + '</div>';
+    arts.forEach(function(a){ html += '<a class="wiki-link' + (a.id===WIKI_SEL?' on':'') + '" onclick="wikiOpen(\\'' + a.id + '\\')">' + esc(a.title) + '</a>'; });
+  });
+  el.innerHTML = html || '<p class="wiki-none">No topics match &ldquo;' + esc(q) + '&rdquo;.</p>';
 }
+function wikiOpen(id){
+  const a = HELP_ARTICLES.filter(function(x){ return x.id===id; })[0]; if(!a) return;
+  WIKI_SEL = id;
+  const main = $('wikiMain');
+  if(main){ main.innerHTML = '<div class="wiki-cat-tag">' + esc(a.cat) + '</div><h2>' + esc(a.title) + '</h2>' + a.body;
+    main.scrollTop = 0; if (window.innerWidth <= 720) main.scrollIntoView({behavior:'smooth',block:'start'}); }
+  paintWikiIndex($('wikiq') ? $('wikiq').value : '');
+}
+function wikiSearch(){ paintWikiIndex($('wikiq').value); }
 $('out').onclick = async function(){
   if (!confirm('Sign out of the ProHealth admin?')) return;
   await fetch('/admin/logout', {method:'POST'}).catch(function(){});
   location.href = '/admin';
 };
 $('help').innerHTML = I.help; $('help').onclick = openHelp;
+$('tbSettings').innerHTML = I.cog; $('tbSettings').onclick = function(){ go('settings'); };
+$('tbAdmins').innerHTML = I.users; $('tbAdmins').onclick = function(){ go('admins'); };
 /* ---- office-hours aware clock (green = open, red = closed + opens-in) ---- */
 const HRS = { open:'08:30', close:'17:00', hol:{} };
 async function loadHours(){
