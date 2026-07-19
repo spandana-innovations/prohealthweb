@@ -203,6 +203,18 @@ await t('PATCH ignores non-whitelisted columns (no injection)', async()=>{
     body:JSON.stringify({resume_key:'hack',bogus:'x'})}), env);
   return r.status===400 && (await r.json()).error==='nothing to update'; });
 
+// --- office hours persistence + config merge ---
+await t('PUT /config saves office hours and they persist', async()=>{
+  await worker.fetch(P('/admin/api/config',{method:'PUT',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({HOURS_OPEN:'09:15',HOURS_CLOSE:'18:00'})}), env);
+  const b = await (await worker.fetch(P('/admin/api/config',{headers:ADMIN}), env)).json();
+  return b.HOURS_OPEN==='09:15' && b.HOURS_CLOSE==='18:00'; });
+await t('PUT /config merges: a holidays-only save keeps hours + email', async()=>{
+  await worker.fetch(P('/admin/api/config',{method:'PUT',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({HOLIDAYS_TEXT:'2026-12-25 = Christmas Day'})}), env);
+  const b = await (await worker.fetch(P('/admin/api/config',{headers:ADMIN}), env)).json();
+  return b.HOLIDAYS_TEXT.includes('Christmas') && b.HOURS_OPEN==='09:15' && b.EMAIL_HOSPICE==='hospice@prohealth.us'; });
+
 out.forEach(l=>console.log('  '+l));
 console.log('\n'+out.filter(x=>x.startsWith('PASS')).length+'/'+out.length+' passed');
 process.exit(out.some(x=>x.startsWith('FAIL'))?1:0);

@@ -493,10 +493,14 @@ async function adminApi(req, env, path, url, who) {
       const b = await req.json();
       const keep = ['EMAIL_FROM', 'EMAIL_DEFAULT', 'EMAIL_INTAKE', 'EMAIL_HOSPICE', 'EMAIL_CAREERS',
                     'EMAIL_PRIVACY', 'HOURS_OPEN', 'HOURS_CLOSE', 'HOLIDAYS_TEXT'];
-      const out = {};
-      for (const k of keep) if (b[k] !== undefined) out[k] = clean(b[k], 4000);
+      // Merge onto the existing config so a partial save (e.g. just holidays)
+      // never wipes the other settings.
+      let out = {};
+      try { out = JSON.parse((await env.CONFIG.get('config')) || '{}'); } catch (e) { out = {}; }
+      const changed = [];
+      for (const k of keep) if (b[k] !== undefined) { out[k] = clean(b[k], 4000); changed.push(k); }
       await env.CONFIG.put('config', JSON.stringify(out));
-      await audit(env, who, 'update config', '', Object.keys(out).join(','));
+      await audit(env, who, 'update config', '', changed.join(','));
       return json({ ok: true });
     }
   }

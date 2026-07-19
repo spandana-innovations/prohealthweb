@@ -245,6 +245,28 @@ a.tel:hover{text-decoration:underline}
 .cfg input:focus,.cfg textarea:focus{outline:2px solid var(--blue);background:#fff}
 .cfg textarea{font-family:ui-monospace,Menlo,monospace;font-size:.79rem;line-height:1.55}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+/* holidays editor */
+.holrows{display:flex;flex-direction:column;gap:8px;margin:10px 0 12px}
+.holrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.holrow input{font:inherit;font-size:.87rem;padding:9px 11px;border:1px solid var(--g200);border-radius:9px;background:var(--g50);font-family:var(--body)}
+.holrow input:focus{outline:2px solid var(--blue);background:#fff}
+.holrow input[type=date]{width:150px;flex:none}
+.holrow input[type=text]{flex:1;min-width:120px}
+.hwd{font-family:var(--nav);font-size:.72rem;font-weight:700;color:var(--slate);min-width:40px;text-align:center}
+.hshift{background:var(--butter);color:var(--butter-ink);border:1px solid #E9D6A6;border-radius:999px;padding:7px 11px;font-family:var(--nav);font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.hshift:hover{filter:brightness(.97)}
+.holbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.holload{display:flex;gap:6px;align-items:center;margin-left:auto}
+.obspanel{margin-top:16px;padding-top:14px;border-top:1px dashed var(--g200)}
+.obspanel h4{font-family:var(--nav);font-size:.86rem;color:var(--navy);margin-bottom:2px}
+.obssub{font-size:.76rem;color:var(--slate);margin-bottom:10px}
+.obsrow{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:.84rem}
+.obsrow:last-child{border-bottom:none}
+.obsrow>span:first-child{min-width:150px;color:var(--slate)}
+.obsrow b{color:var(--navy);font-family:var(--nav);font-weight:600}
+.obsrow.warn b{color:var(--red-ink)}
+.obswarn{margin-left:auto;font-size:.72rem;color:var(--red-ink);font-weight:700}
+@media(max-width:560px){.holrow input[type=date]{width:100%}.holload{margin-left:0}}
 .op{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:9px}
 .op.off{opacity:.55;background:var(--g50)}
 .op .hd{display:flex;gap:10px;align-items:center}
@@ -762,6 +784,88 @@ async function saveOps(){
   } catch(e) { $('opok').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 }
 
+/* ---------------- holidays / observed closures editor ---------------- */
+let HOLS = [];
+const WDN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function parseHolsText(text){
+  const out = [];
+  String(text||'').split('\\n').forEach(function(line){
+    const m = /^\\s*(\\d{4}-\\d{2}-\\d{2})\\s*(?:=\\s*(.*))?$/.exec(line);
+    if (m) out.push({ date:m[1], name:(m[2]||'').trim() });
+  });
+  return out;
+}
+function wdOf(date){ const d = new Date(date + 'T12:00:00Z'); return isNaN(d.getTime()) ? -1 : d.getUTCDay(); }
+function niceDate(date){ const d = new Date(date + 'T12:00:00Z'); if (isNaN(d.getTime())) return date;
+  return new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric',year:'numeric'}).format(d); }
+function holsSorted(){ return HOLS.filter(function(h){ return h.date; }).slice().sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }); }
+function holRow(h, i){
+  const wd = wdOf(h.date), weekend = (wd === 0 || wd === 6);
+  return '<div class="holrow">'
+    + '<input type="date" value="' + esc(h.date) + '" onchange="HOLS[' + i + '].date=this.value;paintHols()">'
+    + '<input type="text" value="' + esc(h.name) + '" placeholder="Holiday name" oninput="HOLS[' + i + '].name=this.value">'
+    + (wd < 0 ? '<span class="hwd">&mdash;</span>'
+       : weekend ? '<button class="hshift" title="Shift to the nearest weekday" onclick="shiftObs(' + i + ')">' + WDN[wd] + ' &rarr; observe ' + (wd === 6 ? 'Fri' : 'Mon') + '</button>'
+                 : '<span class="hwd">' + WDN[wd] + '</span>')
+    + '<button class="mini danger" onclick="removeHol(' + i + ')">Remove</button></div>';
+}
+function paintHols(){
+  const host = $('holsHost'); if (!host) return;
+  const rows = HOLS.map(holRow).join('') || '<p class="sub" style="margin:6px 0 0">No closures yet &mdash; add a day, or load the US federal holidays below.</p>';
+  const obs = holsSorted().map(function(h){
+    const weekend = (wdOf(h.date) === 0 || wdOf(h.date) === 6);
+    return '<div class="obsrow' + (weekend ? ' warn' : '') + '"><span>' + esc(niceDate(h.date)) + '</span><b>' + esc(h.name || 'Holiday') + '</b>'
+      + (weekend ? '<span class="obswarn">weekend &mdash; shift it</span>' : '') + '</div>';
+  }).join('') || '<p class="obssub">Nothing scheduled.</p>';
+  host.innerHTML = '<div class="panel cfg"><h2><span class="pi">' + I.list + '</span>Holidays &amp; office closures</h2>'
+    + '<p class="sub">Days the office is closed. The dashboard clock, chatbot and footer use these. A holiday on a weekend should be observed on the nearest weekday &mdash; use the amber button to shift it.</p>'
+    + '<div class="holrows">' + rows + '</div>'
+    + '<div class="holbtns"><button class="btn" onclick="addHol()">+ Add a day</button>'
+    + '<span class="holload"><select id="holYear" class="st"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option></select>'
+    + '<button class="btn" onclick="loadStd()">Load US federal holidays</button></span>'
+    + '<button class="btn pri" onclick="saveHols()">' + I.check + 'Save closures</button></div>'
+    + '<div id="holok"></div>'
+    + '<div class="obspanel"><h4>Observed closures</h4><p class="obssub">The exact days you will be closed, in order.</p>' + obs + '</div></div>';
+}
+function addHol(){ HOLS.push({ date:'', name:'' }); paintHols(); }
+function removeHol(i){ HOLS.splice(i, 1); paintHols(); }
+function shiftObs(i){
+  const wd = wdOf(HOLS[i].date); if (wd !== 0 && wd !== 6) return;
+  const d = new Date(HOLS[i].date + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + (wd === 6 ? -1 : 1));
+  HOLS[i].date = d.toISOString().slice(0, 10);
+  paintHols();
+}
+function nthWd(y, mo, wd, n){ let c = 0; for (let d = 1; d <= 31; d++){ const dt = new Date(Date.UTC(y, mo, d)); if (dt.getUTCMonth() !== mo) break; if (dt.getUTCDay() === wd){ c++; if (c === n) return dt; } } }
+function lastWd(y, mo, wd){ let r; for (let d = 1; d <= 31; d++){ const dt = new Date(Date.UTC(y, mo, d)); if (dt.getUTCMonth() !== mo) break; if (dt.getUTCDay() === wd) r = dt; } return r; }
+function observedDt(dt){ const w = dt.getUTCDay(); if (w === 6) return new Date(dt.getTime() - 864e5); if (w === 0) return new Date(dt.getTime() + 864e5); return dt; }
+function isoD(dt){ return dt.toISOString().slice(0, 10); }
+function fedHolidays(y){
+  const fx = function(mo, da){ return observedDt(new Date(Date.UTC(y, mo, da))); };
+  const tg = nthWd(y, 10, 4, 4);
+  return [
+    [fx(0,1),'New Year’s Day'], [nthWd(y,0,1,3),'Martin Luther King Jr. Day'], [nthWd(y,1,1,3),'Presidents’ Day'],
+    [lastWd(y,4,1),'Memorial Day'], [fx(5,19),'Juneteenth'], [fx(6,4),'Independence Day'],
+    [nthWd(y,8,1,1),'Labor Day'], [nthWd(y,9,1,2),'Indigenous Peoples’ / Columbus Day'], [fx(10,11),'Veterans Day'],
+    [tg,'Thanksgiving Day'], [new Date(tg.getTime() + 864e5),'Day after Thanksgiving'], [fx(11,25),'Christmas Day'],
+  ].map(function(x){ return { date:isoD(x[0]), name:x[1] }; });
+}
+function loadStd(){
+  const y = parseInt(($('holYear') || {}).value || '2026', 10);
+  const have = {}; HOLS.forEach(function(h){ have[h.date] = true; });
+  fedHolidays(y).forEach(function(h){ if (!have[h.date]){ HOLS.push(h); have[h.date] = true; } });
+  paintHols();
+}
+async function saveHols(){
+  const list = holsSorted();
+  const text = list.map(function(h){ return h.date + ' = ' + (h.name || 'Holiday'); }).join('\\n');
+  try {
+    await api('/config', {method:'PUT', body:JSON.stringify({HOLIDAYS_TEXT:text})});
+    $('holok').innerHTML = '<div class="ok">Saved. ' + list.length + ' closure' + (list.length === 1 ? '' : 's') + ' on file.</div>';
+    loadHours();
+  } catch(e){ $('holok').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+
 /* ---------------- settings ---------------- */
 async function renderSettings(){
   $('view').innerHTML = '<div class="empty"><span class="spin"></span></div>';
@@ -778,14 +882,15 @@ async function renderSettings(){
     + '<div class="row"><div><label>Privacy and data requests</label>' + f('c_privacy', c.EMAIL_PRIVACY, 'privacy@prohealth.us') + '</div>'
     + '<div><label>From address (must be a verified Resend domain)</label>' + f('c_from', c.EMAIL_FROM, 'ProHealth &lt;no-reply@prohealth.us&gt;') + '</div></div>'
     + '<button class="btn pri" style="margin-top:14px" onclick="saveCfg()">' + I.check + 'Save routing</button><div id="cfgok"></div></div>'
-    + '<div class="panel cfg"><h2><span class="pi">' + I.clock + '</span>Office hours and closures</h2>'
-    + '<p class="sub">Used by the chatbot and the footer so the site never promises a two hour reply when nobody is there.</p>'
-    + '<div class="row"><div><label>Opens (Pacific)</label>' + f('c_open', c.HOURS_OPEN || '08:30', '08:30') + '</div>'
-    + '<div><label>Closes (Pacific)</label>' + f('c_close', c.HOURS_CLOSE || '17:00', '17:00') + '</div></div>'
-    + '<label>Closure dates, one per line as YYYY-MM-DD = Reason</label>'
-    + '<textarea id="c_hols" rows="6" placeholder="2026-11-26 = Thanksgiving Day">' + esc(c.HOLIDAYS_TEXT) + '</textarea>'
-    + '<button class="btn pri" style="margin-top:12px" onclick="saveCfg()">' + I.check + 'Save hours</button></div>'
+    + '<div class="panel cfg"><h2><span class="pi">' + I.clock + '</span>Office hours</h2>'
+    + '<p class="sub">Used by the dashboard clock, the chatbot and the footer. 24-hour, Pacific time.</p>'
+    + '<div class="row"><div><label>Opens (Pacific)</label><input type="time" id="c_open" value="' + esc(c.HOURS_OPEN || '08:30') + '"></div>'
+    + '<div><label>Closes (Pacific)</label><input type="time" id="c_close" value="' + esc(c.HOURS_CLOSE || '17:00') + '"></div></div>'
+    + '<button class="btn pri" style="margin-top:14px" onclick="saveCfg()">' + I.check + 'Save hours</button><div id="cfgok2"></div></div>'
+    + '<div id="holsHost"></div>'
     + '<div id="opsHost"></div>';
+  HOLS = parseHolsText(c.HOLIDAYS_TEXT);
+  paintHols();
   loadOpenings('opsHost');
 }
 
