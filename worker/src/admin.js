@@ -46,7 +46,12 @@ header .sp{margin-left:auto;display:flex;align-items:center;gap:9px}
   background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);padding:4px 11px;border-radius:10px;color:#fff}
 .clock b{font-size:.82rem;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums}
 .clock .clbl{font-size:.55rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#9FBBD0}
-@media(max-width:560px){.clock .clbl{display:none}.clock{padding:4px 9px}}
+.clock b{display:flex;align-items:center}
+.sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;flex:none;background:#8494A2}
+.sdot.open{background:#57D08D;box-shadow:0 0 0 0 rgba(87,208,141,.6);animation:live 2s infinite}
+.sdot.closed{background:#F0645A;animation:none}
+.clock.closed .clbl{color:#FBB;letter-spacing:.02em;text-transform:none;font-size:.6rem}
+@media(max-width:560px){.clock{padding:4px 9px}}
 .sync{font-family:var(--nav);font-size:.7rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
   padding:4px 10px;border-radius:999px;color:#CFE4F3;display:inline-flex;align-items:center;gap:6px}
 .sync .dot{width:6px;height:6px;border-radius:50%;background:#57D08D;animation:live 2s infinite}
@@ -275,8 +280,7 @@ a.tel:hover{text-decoration:underline}
   <img src="${LOGO_DATA}" alt="ProHealth">
   <span class="hbadge">Admin</span>
   <div class="sp">
-    <span class="clock" id="clock" title="Current Pacific time"><b id="clockTx">--:--:--</b><span class="clbl">ProHealth PST Time</span></span>
-    <span class="sync" id="sync"><span class="dot"></span><span id="syncTx">&hellip;</span></span>
+    <span class="clock" id="clock" title="Current Pacific time"><b><span class="sdot" id="sdot"></span><span id="clockTx">--:--:--</span></b><span class="clbl" id="clbl">ProHealth PST Time</span></span>
     <span class="who" id="who"></span>
     <button class="out" id="out" title="Sign out" aria-label="Sign out">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
@@ -374,7 +378,6 @@ async function load(){
     const d = await api('/all');
     DATA = d;
     computeCounts();
-    $('syncTx').textContent = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit'}).format(new Date());
     $('who').textContent = d.user || '';
     paintTabs(); render();
   } catch(e) {
@@ -961,6 +964,7 @@ async function saveCfg(){
   const t = $('cfgok') || $('view');
   try { await api('/config', {method:'PUT', body:JSON.stringify(body)});
     t.innerHTML = '<div class="ok">Saved. New leads use these settings immediately.</div>';
+    loadHours();   // refresh the open/closed clock with any new hours or closures
   } catch(e) { t.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 }
 
@@ -994,9 +998,59 @@ $('out').onclick = async function(){
   await fetch('/admin/logout', {method:'POST'}).catch(function(){});
   location.href = '/admin';
 };
-function tickClock(){ const el = $('clockTx'); if(!el) return;
-  el.textContent = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date()); }
+/* ---- office-hours aware clock (green = open, red = closed + opens-in) ---- */
+const HRS = { open:'08:30', close:'17:00', hol:{} };
+async function loadHours(){
+  try { const c = await api('/config');
+    HRS.open = c.HOURS_OPEN || '08:30'; HRS.close = c.HOURS_CLOSE || '17:00';
+    HRS.hol = parseHolidays(c.HOLIDAYS_TEXT);
+  } catch(e) { /* keep defaults */ }
+}
+function parseHolidays(text){
+  const h = {};
+  String(text||'').split('\\n').forEach(function(line){
+    const m = /^\\s*(\\d{4}-\\d{2}-\\d{2})\\s*=\\s*(.+)$/.exec(line);
+    if (m) h[m[1]] = m[2].trim();
+  });
+  return h;
+}
+function toMin(hhmm){ const m = /^(\\d{1,2}):(\\d{2})/.exec(hhmm||''); return m ? (+m[1])*60 + (+m[2]) : 510; }
+function pacInfo(d){
+  const p = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',weekday:'short',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d);
+  const g = {}; p.forEach(function(x){ g[x.type] = x.value; });
+  let hh = parseInt(g.hour,10); if (hh === 24) hh = 0;
+  return { wd:g.weekday, date:g.year+'-'+g.month+'-'+g.day, min:hh*60 + parseInt(g.minute,10) };
+}
+function isBiz(t){ return t.wd !== 'Sat' && t.wd !== 'Sun' && !(HRS.hol && HRS.hol[t.date]); }
+function fmtDur(mins){
+  if (mins < 1) return 'moments';
+  if (mins < 60) return mins + ' min';
+  const h = Math.floor(mins/60), m = mins % 60;
+  if (h < 24) return h + 'h' + (m ? ' ' + m + 'm' : '');
+  const days = Math.floor(h/24), rh = h % 24;
+  return days + 'd' + (rh ? ' ' + rh + 'h' : '');
+}
+function officeStatus(now){
+  const openMin = toMin(HRS.open), closeMin = toMin(HRS.close), t0 = pacInfo(now);
+  if (isBiz(t0) && t0.min >= openMin && t0.min < closeMin) return { open:true };
+  for (let off = 0; off < 21; off++){
+    const t = pacInfo(new Date(now.getTime() + off*86400000));
+    if (!isBiz(t)) continue;
+    if (off === 0 && t0.min >= openMin) continue;   // after hours today
+    return { open:false, opensIn: fmtDur(off*1440 + openMin - t0.min) };
+  }
+  return { open:false, opensIn:'soon' };
+}
+function tickClock(){
+  const el = $('clockTx'); if (!el) return;
+  const now = new Date();
+  el.textContent = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true}).format(now);
+  const s = officeStatus(now), dot = $('sdot'), lbl = $('clbl'), box = $('clock');
+  if (dot) dot.className = 'sdot ' + (s.open ? 'open' : 'closed');
+  if (box) box.classList.toggle('closed', !s.open);
+  if (lbl) lbl.textContent = s.open ? 'ProHealth PST Time' : ('Closed \\u00b7 opens in ' + s.opensIn);
+}
 tickClock(); setInterval(tickClock, 1000);
-paintTabs(); load();
+paintTabs(); load(); loadHours();
 setInterval(function(){ if (['overview','leads','callbacks','contacts','applications','requests'].indexOf(TAB) > -1) load(); }, 60000);
 </script></body></html>`;
