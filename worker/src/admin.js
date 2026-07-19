@@ -152,6 +152,29 @@ main{padding:18px;max-width:1180px;margin:0 auto}
 .rad{display:flex;align-items:center;gap:8px;font-family:var(--body);font-size:.83rem;font-weight:500;color:var(--ink);margin:0;cursor:pointer}
 .rad input{width:auto;margin:0}
 .warnbox{background:var(--butter);border:1px solid #E9D6A6;color:var(--butter-ink);padding:9px 12px;border-radius:9px;font-size:.8rem;margin-bottom:12px}
+/* contact push row */
+.pushrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--g200)}
+.pushlbl{font-family:var(--nav);font-size:.74rem;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.05em}
+/* résumé modal */
+.modal[hidden]{display:none}
+.modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-bd{position:absolute;inset:0;background:rgba(11,58,82,.55);backdrop-filter:blur(3px)}
+.modal-box{position:relative;background:#fff;border-radius:16px;box-shadow:0 30px 80px rgba(11,58,82,.4);
+  width:min(900px,100%);height:min(88vh,900px);display:flex;flex-direction:column;overflow:hidden}
+.modal-hd{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--g50)}
+.modal-hd span{font-family:var(--nav);font-weight:600;color:var(--navy);font-size:.92rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal-x{width:32px;height:32px;border:none;background:var(--g100);border-radius:8px;font-size:1.3rem;line-height:1;color:var(--slate);cursor:pointer}
+.modal-x:hover{background:var(--red);color:var(--red-ink)}
+.modal-body{flex:1;background:var(--g100)}
+.modal-body iframe{width:100%;height:100%;border:none;display:block}
+/* activity log */
+.logwrap{overflow-x:auto;border:1px solid var(--line);border-radius:11px}
+table.log{width:100%;border-collapse:collapse;font-size:.8rem}
+table.log th{text-align:left;font-family:var(--nav);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--slate);background:var(--g50);padding:9px 11px;position:sticky;top:0}
+table.log td{padding:9px 11px;border-top:1px solid var(--line);color:var(--ink);vertical-align:top}
+table.log td.lw{white-space:nowrap;color:var(--slate)}
+table.log td.ld{color:var(--slate);max-width:280px;word-break:break-word}
+table.log tbody tr:hover{background:var(--ice-2)}
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:10px;
   transition:box-shadow .16s}
 .card:hover{box-shadow:var(--shadow-soft)}
@@ -251,6 +274,16 @@ a.tel:hover{text-decoration:underline}
 <nav class="tabs" id="tabs"></nav>
 <main id="view"><div class="empty"><span class="spin"></span></div></main>
 
+<div class="modal" id="modal" hidden>
+  <div class="modal-bd" onclick="closeModal()"></div>
+  <div class="modal-box">
+    <div class="modal-hd"><span id="modalTitle">Résumé</span>
+      <a id="modalOpen" class="btn sm" href="#" target="_blank" rel="noopener">Open in new tab</a>
+      <button class="modal-x" onclick="closeModal()" aria-label="Close">&times;</button></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
 <script>
 const I = {
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9h13v-9"/></svg>',
@@ -287,15 +320,19 @@ const ago = (iso) => { const d = D(iso); if(!d) return '';
   return Math.floor(s/86400) + 'd ago'; };
 
 let TAB = 'overview', DATA = {leads:[],applications:[],data_requests:[]}, C = {}, Q = '';
-let F = { leads:{status:'all',type:'all'}, applications:{status:'all',role:'All',office:'All',resume:'all'}, requests:{status:'all',due:'all'} };
-const TABS = [['overview','Overview','home'],['leads','Leads','users'],['applications','Applicants','brief'],
-              ['requests','Data requests','lock'],['openings','Openings','list'],['settings','Settings','cog']];
+let F = { leads:{status:'all',type:'all'}, contacts:{status:'all'}, applications:{status:'all',role:'All',office:'All',resume:'all'}, requests:{status:'all',due:'all'} };
+function tabList(){
+  const t = [['overview','Overview','home'],['leads','Leads','users'],['contacts','Contacts','phone'],
+             ['applications','Applicants','brief'],['requests','Data requests','lock'],['settings','Settings','cog']];
+  if (DATA.super) { t.push(['admins','Admins','users']); t.push(['audit','Activity','doc']); }
+  return t;
+}
 
 function paintTabs(){
-  $('tabs').innerHTML = TABS.map(function(t){
+  $('tabs').innerHTML = tabList().map(function(t){
     const k = t[0], l = t[1], ic = t[2];
     let pill = '';
-    if (k === 'leads' || k === 'applications' || k === 'requests') {
+    if (k === 'leads' || k === 'contacts' || k === 'applications' || k === 'requests') {
       const n = C[k] || 0;
       const isAlert = k === 'requests' && (C.overdue || 0) > 0;
       pill = '<span class="pill ' + (isAlert ? 'alert' : (n ? '' : 'zero')) + '">' + n + '</span>';
@@ -307,15 +344,19 @@ function paintTabs(){
   });
 }
 
+const isContactRow = function(x){ return (x.type||'') === 'contact'; };
+function computeCounts(){
+  C = { leads:    DATA.leads.filter(function(x){return x.status==='new' && !isContactRow(x);}).length,
+        contacts: DATA.leads.filter(function(x){return x.status==='new' &&  isContactRow(x);}).length,
+        applications: DATA.applications.filter(function(x){return x.status==='new';}).length,
+        requests:  DATA.data_requests.filter(function(x){return x.status==='new';}).length,
+        overdue:   DATA.data_requests.filter(function(x){return x.status==='new' && x.due_by && new Date(x.due_by) < new Date();}).length };
+}
 async function load(){
   try {
     const d = await api('/all');
     DATA = d;
-    const overdue = d.data_requests.filter(function(x){ return x.status==='new' && x.due_by && new Date(x.due_by) < new Date(); }).length;
-    C = { leads: d.leads.filter(function(x){return x.status==='new';}).length,
-          applications: d.applications.filter(function(x){return x.status==='new';}).length,
-          requests: d.data_requests.filter(function(x){return x.status==='new';}).length,
-          overdue: overdue };
+    computeCounts();
     $('syncTx').textContent = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit'}).format(new Date());
     $('who').textContent = d.user || '';
     paintTabs(); render();
@@ -405,7 +446,9 @@ function chips(key, field, opts){
 }
 function filterRows(){
   const q = Q.toLowerCase().trim();
-  const rows = TAB === 'leads' ? DATA.leads : TAB === 'applications' ? DATA.applications : DATA.data_requests;
+  const rows = TAB === 'leads' ? DATA.leads.filter(function(x){ return !isContactRow(x); })
+             : TAB === 'contacts' ? DATA.leads.filter(isContactRow)
+             : TAB === 'applications' ? DATA.applications : DATA.data_requests;
   const f = F[TAB] || {};
   return rows.filter(function(r){
     if (f.status && f.status !== 'all' && r.status !== f.status) return false;
@@ -430,8 +473,11 @@ function renderList(){
   let filters = '';
   if (TAB === 'leads') {
     filters = '<div class="frow"><span class="flbl">Status</span>' + chips('leads','status',[['all','All']].concat(STATUSES)) + '</div>'
-            + '<div class="frow"><span class="flbl">Type</span>' + chips('leads','type',[['all','All'],['callback','Callback'],['referral','Referral'],['contact','Contact form']])
-            + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.length + '</span></div>';
+            + '<div class="frow"><span class="flbl">Type</span>' + chips('leads','type',[['all','All'],['callback','Callback'],['referral','Referral']])
+            + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(function(x){return !isContactRow(x);}).length + '</span></div>';
+  } else if (TAB === 'contacts') {
+    filters = '<div class="frow"><span class="flbl">Status</span>' + chips('contacts','status',[['all','All']].concat(STATUSES))
+            + '<span class="fcount">' + rows.length + ' of ' + DATA.leads.filter(isContactRow).length + '</span></div>';
   } else if (TAB === 'applications') {
     const offices = ['All'].concat(DATA.applications.map(function(a){return a.office;}).filter(function(v,i,s){ return v && s.indexOf(v)===i; }));
     filters = '<div class="frow"><span class="flbl">Status</span>' + chips('applications','status',[['all','All']].concat(STATUSES)) + '</div>'
@@ -460,12 +506,12 @@ function stSel(id, cur, kind){
     + '</select>';
 }
 async function setStatus(kind, id, status){
-  await api('/' + kind + '/' + id, {method:'PATCH', body:JSON.stringify({status:status})});
-  const key = kind === 'requests' ? 'data_requests' : kind;
+  const ep = kind === 'contacts' ? 'leads' : kind;   // contacts live in the leads table
+  await api('/' + ep + '/' + id, {method:'PATCH', body:JSON.stringify({status:status})});
+  const key = ep === 'requests' ? 'data_requests' : ep;
   const row = DATA[key].filter(function(x){ return x.id === id; })[0];
   if (row) row.status = status;
-  C[kind] = DATA[key].filter(function(x){ return x.status === 'new'; }).length;
-  C.overdue = DATA.data_requests.filter(function(x){ return x.status==='new' && x.due_by && new Date(x.due_by) < new Date(); }).length;
+  computeCounts();
   paintTabs(); renderList();
 }
 let noteT;
@@ -484,10 +530,22 @@ function cardFor(r){
     + (r.message ? '<div class="kv"><b>Message</b><span>' + esc(r.message) + '</span></div>' : '') + '</div>'
     + '<textarea class="note" placeholder="Notes (saved automatically)" oninput="saveNote(\\'leads\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
 
+  if (TAB === 'contacts') return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
+    + '<div><h3>' + esc(r.name) + '</h3><div class="meta">' + fmt(r.created_at) + ' &middot; ' + ago(r.created_at) + (r.page ? ' &middot; ' + esc(r.page) : '') + '</div></div>'
+    + '<div class="right"><span class="tag ' + esc(r.status) + '">' + esc(r.status) + '</span>' + stSel(r.id, r.status, 'contacts') + '</div></div>'
+    + '<div class="body"><div class="kv"><b>Phone</b><span><a class="tel" href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a></span></div>'
+    + (r.email ? '<div class="kv"><b>Email</b><span><a class="tel" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></span></div>' : '')
+    + (r.service ? '<div class="kv"><b>Topic</b><span>' + esc(r.service) + '</span></div>' : '')
+    + (r.message ? '<div class="kv"><b>Message</b><span>' + esc(r.message) + '</span></div>' : '') + '</div>'
+    + '<div class="pushrow"><span class="pushlbl">Push to</span>'
+    + '<button class="btn sm" onclick="pushContact(\\'' + r.id + '\\',\\'leads\\')">' + I.users + 'Leads</button>'
+    + '<button class="btn sm" onclick="pushContact(\\'' + r.id + '\\',\\'applications\\')">' + I.brief + 'Applicants</button></div>'
+    + '<textarea class="note" placeholder="Notes (saved automatically)" oninput="saveNote(\\'leads\\',\\'' + r.id + '\\',this.value)">' + esc(r.notes) + '</textarea></div>';
+
   if (TAB === 'applications') return '<div class="card' + (isNew?' is-new':'') + '"><div class="top">'
     + '<div><h3>' + esc(r.name) + '</h3><div class="meta">' + fmt(r.created_at) + ' &middot; ' + ago(r.created_at) + '</div></div>'
     + '<div class="right"><span class="tag ' + esc(r.status) + '">' + esc(r.status) + '</span>' + stSel(r.id, r.status, 'applications')
-    + (r.resume_key ? '<a class="btn sm pri" href="/admin/api/resume?key=' + encodeURIComponent(r.resume_key) + '" target="_blank">' + I.doc + 'Resume</a>' : '<span class="tag closed">no resume</span>')
+    + (r.resume_key ? '<button class="btn sm pri" onclick="openResume(\\'' + esc(r.resume_key) + '\\')">' + I.doc + 'Resume</button>' : '<span class="tag closed">no resume</span>')
     + '</div></div>'
     + '<div class="body"><div class="kv"><b>Phone</b><span><a class="tel" href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a></span></div>'
     + (r.email ? '<div class="kv"><b>Email</b><span><a class="tel" href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a></span></div>' : '')
@@ -579,16 +637,18 @@ function exportCsv(){
 
 /* ---------------- openings ---------------- */
 const OFFICES = ['Sacramento','Walnut Creek','San Jose','Stockton','Monterey','Fresno'];
-let OPEN = [];
-async function renderOpenings(){
-  $('view').innerHTML = '<div class="empty"><span class="spin"></span></div>';
+let OPEN = [], OPHOST = 'view';
+async function loadOpenings(host){
+  OPHOST = host || 'view';
+  const el = $(OPHOST); if (!el) return;
+  el.innerHTML = '<div class="empty"><span class="spin"></span></div>';
   try { const d = await api('/openings'); OPEN = d.openings || []; }
-  catch(e) { $('view').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; return; }
+  catch(e) { el.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; return; }
   paintOpenings();
 }
 function paintOpenings(){
   const live = OPEN.filter(function(o){ return o.active !== false; }).length;
-  $('view').innerHTML = '<div class="panel"><h2><span class="pi">' + I.list + '</span>Job openings</h2>'
+  $(OPHOST).innerHTML = '<div class="panel"><h2><span class="pi">' + I.list + '</span>Job openings</h2>'
     + '<p class="sub">These publish straight to the careers page. Toggle a role off to hide it without losing it, or remove it entirely. '
     + '<b>' + live + ' live</b> of ' + OPEN.length + ' right now. The site updates within a minute of saving, no deploy needed.</p>'
     + '<div id="ops">' + OPEN.map(opRow).join('') + '</div>'
@@ -653,8 +713,34 @@ async function renderSettings(){
     + '<label>Closure dates, one per line as YYYY-MM-DD = Reason</label>'
     + '<textarea id="c_hols" rows="6" placeholder="2026-11-26 = Thanksgiving Day">' + esc(c.HOLIDAYS_TEXT) + '</textarea>'
     + '<button class="btn pri" style="margin-top:12px" onclick="saveCfg()">' + I.check + 'Save hours</button></div>'
-    + (DATA.super ? adminsPanelHTML() : '');
-  if (DATA.super) loadAdmins();
+    + '<div id="opsHost"></div>';
+  loadOpenings('opsHost');
+}
+
+/* ---------------- admins tab (owner only) ---------------- */
+function renderAdmins(){
+  if (!DATA.super) { $('view').innerHTML = '<div class="err">Owner only.</div>'; return; }
+  $('view').innerHTML = adminsPanelHTML();
+  loadAdmins();
+}
+
+/* ---------------- activity / edit log tab (owner only) ---------------- */
+async function renderAudit(){
+  if (!DATA.super) { $('view').innerHTML = '<div class="err">Owner only.</div>'; return; }
+  $('view').innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  let log = [];
+  try { const d = await api('/audit'); log = d.log || []; }
+  catch(e) { $('view').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; return; }
+  const rows = log.map(function(x){
+    return '<tr><td class="lw">' + fmt(x.created_at) + '</td><td>' + esc(x.actor || '') + '</td>'
+      + '<td><b>' + esc(x.action || '') + '</b></td><td>' + esc(x.target || '') + '</td>'
+      + '<td class="ld">' + esc(x.detail || '') + '</td></tr>';
+  }).join('');
+  $('view').innerHTML = '<div class="panel"><h2><span class="pi">' + I.doc + '</span>Activity &amp; edit log</h2>'
+    + '<p class="sub">Every action taken in the dashboard, newest first. Owner only &middot; last ' + log.length + ' entries.</p>'
+    + (log.length
+        ? '<div class="logwrap"><table class="log"><thead><tr><th>When (PT)</th><th>Who</th><th>Action</th><th>Target</th><th>Detail</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+        : '<div class="empty"><b>No activity yet</b>Actions appear here as they happen.</div>') + '</div>';
 }
 
 /* ---------------- backend access (admin accounts) — owner only ---------------- */
@@ -752,10 +838,29 @@ async function saveCfg(){
 
 function render(){
   if (TAB === 'overview') return renderOverview();
-  if (TAB === 'openings') return renderOpenings();
   if (TAB === 'settings') return renderSettings();
-  renderList();
+  if (TAB === 'admins') return renderAdmins();
+  if (TAB === 'audit') return renderAudit();
+  renderList();   // leads, contacts, applications, requests
 }
+async function pushContact(id, dest){
+  try{
+    if (dest === 'leads') await api('/leads/' + id, {method:'PATCH', body:JSON.stringify({type:'callback'})});
+    else await api('/leads/' + id + '/to-application', {method:'POST', body:JSON.stringify({})});
+    await load();
+    go(dest);
+  }catch(e){ alert(e.message); }
+}
+/* résumé preview modal */
+function openResume(key){
+  const url = '/admin/api/resume?key=' + encodeURIComponent(key);
+  $('modalTitle').textContent = 'Résumé — ' + (String(key).split('/').pop() || '');
+  $('modalOpen').href = url;
+  $('modalBody').innerHTML = '<iframe src="' + url + '" title="Résumé preview"></iframe>';
+  $('modal').hidden = false; document.body.style.overflow = 'hidden';
+}
+function closeModal(){ $('modal').hidden = true; $('modalBody').innerHTML = ''; document.body.style.overflow = ''; }
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
 $('out').onclick = async function(){
   if (!confirm('Sign out of the ProHealth admin?')) return;
   await fetch('/admin/logout', {method:'POST'}).catch(function(){});
@@ -765,5 +870,5 @@ function tickClock(){ const el = $('clockTx'); if(!el) return;
   el.textContent = new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date()); }
 tickClock(); setInterval(tickClock, 1000);
 paintTabs(); load();
-setInterval(function(){ if (TAB !== 'openings' && TAB !== 'settings') load(); }, 60000);
+setInterval(function(){ if (['overview','leads','contacts','applications','requests'].indexOf(TAB) > -1) load(); }, 60000);
 </script></body></html>`;

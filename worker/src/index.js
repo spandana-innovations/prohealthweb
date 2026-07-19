@@ -208,6 +208,46 @@ async function sendEmail(env, cfg, to, subject, html, attachment) {
   if (!r.ok) console.log('Resend error', r.status, await r.text());
 }
 
+/* ---------------- acknowledgement email to the submitter ----------------
+   A branded, email-client-safe (table + inline styles) confirmation sent to
+   the person who submitted a lead / contact / application / data request. */
+const ACK_PHONE = '877.667.8770';
+function ackShell(headline, intro, rows, closing) {
+  const rowsHtml = (rows || []).filter(Boolean).map(function (r) {
+    return '<tr><td style="padding:4px 0;color:#5D6E80;font:600 13px Arial,sans-serif;width:130px;vertical-align:top">' + esc(r[0]) +
+      '</td><td style="padding:4px 0;color:#0F2233;font:400 14px Arial,sans-serif">' + esc(r[1]) + '</td></tr>';
+  }).join('');
+  return '<!doctype html><html><body style="margin:0;background:#EEF5F9;padding:24px 0">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF5F9"><tr><td align="center">' +
+    '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E1E8EF">' +
+    // header
+    '<tr><td style="background:#0B3A52;background:linear-gradient(135deg,#0B3A52,#138AC0);padding:22px 28px">' +
+    '<img src="https://prohealth.us/assets/logo-white.png" alt="ProHealth Home Care" height="26" style="height:26px;display:block">' +
+    '<div style="color:#CFE9F6;font:600 12px Arial,sans-serif;letter-spacing:.5px;margin-top:6px">PROHEALTH HOME CARE</div></td></tr>' +
+    // body
+    '<tr><td style="padding:28px">' +
+    '<h1 style="margin:0 0 10px;color:#0B3A52;font:700 21px Arial,sans-serif">' + esc(headline) + '</h1>' +
+    '<p style="margin:0 0 18px;color:#3B4A57;font:400 15px/1.6 Arial,sans-serif">' + intro + '</p>' +
+    (rowsHtml ? '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#F6FAFC;border:1px solid #E4EEF4;border-radius:10px;padding:6px 14px;margin-bottom:18px"><tr><td><table role="presentation" width="100%">' + rowsHtml + '</table></td></tr></table>' : '') +
+    '<p style="margin:0 0 4px;color:#3B4A57;font:400 15px/1.6 Arial,sans-serif">' + closing + '</p>' +
+    '<p style="margin:18px 0 0;color:#3B4A57;font:400 15px/1.6 Arial,sans-serif">Warm regards,<br><b style="color:#0B3A52">The ProHealth Home Care Team</b></p>' +
+    '<div style="margin-top:22px;text-align:center"><a href="tel:+18776678770" style="display:inline-block;background:#138AC0;color:#fff;text-decoration:none;font:700 14px Arial,sans-serif;padding:11px 22px;border-radius:9px">Call us: ' + ACK_PHONE + '</a></div>' +
+    '</td></tr>' +
+    // footer
+    '<tr><td style="background:#F8FAFB;border-top:1px solid #E4E9EF;padding:18px 28px;color:#8494A2;font:400 12px/1.6 Arial,sans-serif">' +
+    'ProHealth Home Care, Inc. &middot; Sacramento, California &middot; ' + ACK_PHONE + '<br>' +
+    'This is an automated confirmation. Please do not reply. For anything urgent, call us any time; our on-call clinical line is staffed 24/7.<br>' +
+    'This message may reference protected health information. If it reached you in error, please delete it.' +
+    '</td></tr></table></td></tr></table></body></html>';
+}
+function firstName(n) { return String(n || '').trim().split(/\s+/)[0] || 'there'; }
+
+async function sendAck(env, cfg, to, subject, html) {
+  if (!to) return;
+  try { await sendEmail(env, cfg, to, subject, html); }
+  catch (e) { console.log('ack email failed', e.message); }   // never fail the submission on an ack
+}
+
 /* ---------------- POST /leads ---------------- */
 async function handleLead(req, env, cors) {
   const d = await req.json();
@@ -229,6 +269,19 @@ async function handleLead(req, env, cors) {
     '<b>Email:</b> ' + esc(d.email || '-') + '<br><b>Page:</b> ' + esc(d.page || '-') + '</p>' +
     '<p><b>Message:</b><br>' + esc(d.message || d.notes || '-') + '</p>' +
     '<p style="color:#888">Lead ' + id + '. Open the dashboard to set status and add notes.</p>');
+
+  if (clean(d.email)) {
+    const isContact = (d.type || '') === 'contact';
+    await sendAck(env, cfg, clean(d.email, 160),
+      isContact ? 'We received your message — ProHealth Home Care' : 'Thanks for reaching out — ProHealth Home Care',
+      ackShell(
+        'Hi ' + firstName(d.name) + ", we've got it.",
+        isContact
+          ? 'Thank you for contacting ProHealth Home Care. Your message has reached our team and a care coordinator will get back to you, usually the same business day.'
+          : 'Thank you for reaching out about home health care. Your request is with our care team and we will be in touch shortly to help.',
+        [ ['Service', d.service || '—'], d.message ? ['Your message', d.message] : null ],
+        'If you need anything in the meantime, just call us at ' + ACK_PHONE + '.'));
+  }
   return json({ ok: true, id }, cors);
 }
 
@@ -266,6 +319,16 @@ async function handleApplication(req, env, cors) {
     '<b>Office:</b> ' + esc(form.get('office') || '-') + '<br><b>License:</b> ' + esc(form.get('license') || '-') + '<br>' +
     '<b>Resume:</b> ' + (resumeKey ? 'attached' : 'not provided') + '</p>' +
     '<p style="color:#888">Application ' + id + '</p>', attachment);
+
+  const appEmail = clean(form.get('email'), 160);
+  if (appEmail) {
+    await sendAck(env, cfg, appEmail, 'We received your application — ProHealth Home Care',
+      ackShell(
+        'Hi ' + firstName(name) + ', thanks for applying!',
+        "We've received your application to join ProHealth Home Care. Our recruiting team will review it and reach out, usually within one business day.",
+        [ ['Role', clean(form.get('role'), 80) || 'General'], ['Résumé', resumeKey ? 'Received' : 'Not attached'] ],
+        'We look forward to speaking with you. Questions? Call us at ' + ACK_PHONE + '.'));
+  }
   return json({ ok: true, id }, cors);
 }
 
@@ -294,6 +357,13 @@ async function handleDataRequest(req, env, cors) {
     '<b>DOB:</b> ' + esc(d.dob || '-') + '<br><b>Authorised agent:</b> ' + (d.is_agent ? 'Yes' : 'No') + '</p>' +
     '<p><b>Details:</b><br>' + esc(d.details || '-') + '</p>' +
     '<p style="color:#C0392B"><b>CCPA clock:</b> acknowledge within 10 business days, respond by ' + due.slice(0, 10) + '.</p>');
+
+  await sendAck(env, cfg, clean(d.email, 160), '[' + ref + '] We received your privacy request — ProHealth Home Care',
+    ackShell(
+      'Hi ' + firstName(d.name) + ', your request is logged.',
+      "We've received your privacy request and opened it under the reference below. We will acknowledge it within 10 business days and respond within 45 calendar days, as required by California law (CCPA/CPRA).",
+      [ ['Reference', ref], ['Request type', d.request_type || '—'], ['Logged', due.slice(0, 10) ? new Date().toISOString().slice(0, 10) : '' ] ],
+      'If you have questions about this request, call us at ' + ACK_PHONE + ' and reference ' + ref + '.'));
   return json({ ok: true, id, ref }, cors);
 }
 
@@ -320,6 +390,7 @@ async function adminApi(req, env, path, url, who) {
       sets.push('status = ?'); vals.push(b.status);
     }
     if (b.notes !== undefined) { sets.push('notes = ?'); vals.push(clean(b.notes, 8000)); }
+    if (b.type !== undefined && table === 'leads') { sets.push('type = ?'); vals.push(clean(b.type, 40)); }
     if (!sets.length) return json({ error: 'nothing to update' }, {}, 400);
     vals.push(id);
     const stmt = env.DB.prepare('UPDATE ' + table + ' SET ' + sets.join(', ') + ' WHERE id = ?');
@@ -412,6 +483,31 @@ async function adminApi(req, env, path, url, who) {
       await audit(env, who, 'update config', '', Object.keys(out).join(','));
       return json({ ok: true });
     }
+  }
+
+  /* Promote a contact/lead into a job application (contact triage). */
+  const promo = path.match(/^\/leads\/([\w-]+)\/to-application$/);
+  if (promo && req.method === 'POST') {
+    const lid = promo[1];
+    const lead = (await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).all()).results[0];
+    if (!lead) return json({ error: 'lead not found' }, {}, 404);
+    const aid = crypto.randomUUID();
+    await env.DB.prepare(
+      'INSERT INTO applications (id, name, phone, email, role, office, license, resume_key, created_at) ' +
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))"
+    ).bind(aid, clean(lead.name, 120), clean(lead.phone, 40), clean(lead.email, 160),
+           clean(lead.service, 80), '', '', '').run();
+    // mark the source contact as handled so it leaves the queue
+    await env.DB.prepare("UPDATE leads SET status = 'converted' WHERE id = ?").bind(lid).run();
+    await audit(env, who, 'promote contact to applicant', lid, aid);
+    return json({ ok: true, id: aid });
+  }
+
+  /* Usage / edit log (owner only). */
+  if (path === '/audit' && req.method === 'GET') {
+    if (!isSuper(who, env)) return json({ error: 'Only the owner can view the activity log.' }, {}, 403);
+    const r = await env.DB.prepare('SELECT * FROM audit_log ORDER BY created_at DESC LIMIT 500').all();
+    return json({ log: r.results || [] });
   }
 
   /* ---------------- backend access: admin accounts (super-admins only) ---------------- */

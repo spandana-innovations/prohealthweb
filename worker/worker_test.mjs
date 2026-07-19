@@ -144,6 +144,40 @@ await t('POST /erase writes to the audit log', async()=>{
     body:JSON.stringify({email:'gone@x.com',what:['leads','applications']})}), env);
   return r.status===200 && rows.audit_log.length > before; });
 
+// --- contact triage, audit log, acknowledgement emails ---
+const DANIEL = { 'Cf-Access-Jwt-Assertion':'jwt', 'Cf-Access-Authenticated-User-Email':'daniel@prohealth.us' };
+env.ADMIN_EMAILS = 'boss@prohealth.us,daniel@prohealth.us';
+
+await t('PATCH /leads/:id can change type (push contact -> callback)', async()=>{
+  const r = await worker.fetch(P('/admin/api/leads/x0',{method:'PATCH',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({type:'callback'})}), env);
+  return r.status===200; });
+await t('POST /leads/:id/to-application promotes a contact into an applicant', async()=>{
+  const before = rows.applications.length;
+  const r = await worker.fetch(P('/admin/api/leads/x0/to-application',{method:'POST',headers:{...ADMIN,'Content-Type':'application/json'},body:'{}'}), env);
+  return r.status===200 && rows.applications.length===before+1; });
+await t('GET /audit is owner-only (403 for a non-super admin)', async()=>
+  (await worker.fetch(P('/admin/api/audit',{headers:ADMIN}), env)).status===403);
+await t('GET /audit returns the log for the owner (daniel@)', async()=>{
+  const r = await worker.fetch(P('/admin/api/audit',{headers:DANIEL}), env);
+  return r.status===200 && Array.isArray((await r.json()).log); });
+await t('a submitted lead with an email gets an acknowledgement email', async()=>{
+  const calls=[]; const orig=globalThis.fetch;
+  globalThis.fetch = async(u,o)=>{ try{ calls.push(JSON.parse(o.body)); }catch(e){} return {ok:true,text:async()=>''}; };
+  const env2 = {...env, RESEND_API_KEY:'re_test'};
+  await worker.fetch(P('/leads', J({name:'Ann Lee',phone:'5',email:'ann@x.com',type:'contact'})), env2);
+  globalThis.fetch = orig;
+  const toAnn = calls.some(c=> (Array.isArray(c.to)?c.to:[c.to]).indexOf('ann@x.com') > -1);
+  return toAnn; });
+await t('a lead with no email sends no acknowledgement (only staff notify)', async()=>{
+  const tos=[]; const orig=globalThis.fetch;
+  globalThis.fetch = async(u,o)=>{ try{ const b=JSON.parse(o.body); tos.push(...(Array.isArray(b.to)?b.to:[b.to])); }catch(e){} return {ok:true,text:async()=>''}; };
+  const env2 = {...env, RESEND_API_KEY:'re_test'};
+  await worker.fetch(P('/leads', J({name:'No Email',phone:'5',type:'referral'})), env2);
+  globalThis.fetch = orig;
+  return !tos.includes('');   // never an ack to an empty address
+});
+
 out.forEach(l=>console.log('  '+l));
 console.log('\n'+out.filter(x=>x.startsWith('PASS')).length+'/'+out.length+' passed');
 process.exit(out.some(x=>x.startsWith('FAIL'))?1:0);
