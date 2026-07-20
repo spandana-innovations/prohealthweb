@@ -235,6 +235,27 @@ await t('roster labels roles: owner marleen@, superadmin daniel@', async()=>{
 await t('the owner marleen@ cannot be removed', async()=>
   (await worker.fetch(P('/admin/api/admins/marleen@prohealth.us',{method:'DELETE',headers:DANIEL}), env)).status===400);
 
+// --- email diagnostic ---
+await t('test-email rejects a bad recipient (400)', async()=>
+  (await worker.fetch(P('/admin/api/test-email',{method:'POST',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({to:'nope'})}), env)).status===400);
+await t('test-email reports clearly when no RESEND key is set', async()=>{
+  const r = await worker.fetch(P('/admin/api/test-email',{method:'POST',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({to:'a@b.com'})}), env);
+  const j = await r.json(); return j.ok===false && /RESEND/.test(j.error); });
+await t('test-email sends when configured (Resend OK)', async()=>{
+  const env2 = {...env, RESEND_API_KEY:'re_test'}; const orig=globalThis.fetch;
+  globalThis.fetch = async()=>({ok:true,text:async()=>'{"id":"abc"}'});
+  const r = await worker.fetch(P('/admin/api/test-email',{method:'POST',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({to:'a@b.com'})}), env2);
+  globalThis.fetch = orig; const j = await r.json(); return j.ok===true && j.to==='a@b.com'; });
+await t('test-email surfaces the real Resend failure reason', async()=>{
+  const env2 = {...env, RESEND_API_KEY:'re_test'}; const orig=globalThis.fetch;
+  globalThis.fetch = async()=>({ok:false,status:403,text:async()=>'{"message":"The prohealth.us domain is not verified."}'});
+  const r = await worker.fetch(P('/admin/api/test-email',{method:'POST',headers:{...ADMIN,'Content-Type':'application/json'},
+    body:JSON.stringify({to:'a@b.com'})}), env2);
+  globalThis.fetch = orig; const j = await r.json(); return j.ok===false && /not verified/.test(j.error); });
+
 out.forEach(l=>console.log('  '+l));
 console.log('\n'+out.filter(x=>x.startsWith('PASS')).length+'/'+out.length+' passed');
 process.exit(out.some(x=>x.startsWith('FAIL'))?1:0);

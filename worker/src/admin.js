@@ -293,6 +293,8 @@ a.tel:hover{text-decoration:underline}
   border-radius:10px;background:var(--g50);font-family:var(--body)}
 .cfg input:focus,.cfg textarea:focus{outline:2px solid var(--blue);background:#fff}
 .cfg textarea{font-family:ui-monospace,Menlo,monospace;font-size:.79rem;line-height:1.55}
+.testmail{margin-top:16px;padding-top:14px;border-top:1px dashed var(--g200)}
+.testrow{display:flex;gap:8px;align-items:center}.testrow input{flex:1}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 /* holidays editor */
 .holrows{display:flex;flex-direction:column;gap:8px;margin:10px 0 12px}
@@ -945,7 +947,11 @@ async function renderSettings(){
     + '<div><label>Careers and applications</label>' + f('c_careers', c.EMAIL_CAREERS, 'hr@prohealth.us') + '</div></div>'
     + '<div class="row"><div><label>Privacy and data requests</label>' + f('c_privacy', c.EMAIL_PRIVACY, 'privacy@prohealth.us') + '</div>'
     + '<div><label>From address (must be a verified Resend domain)</label>' + f('c_from', c.EMAIL_FROM, 'ProHealth &lt;no-reply@prohealth.us&gt;') + '</div></div>'
-    + '<button class="btn pri" style="margin-top:14px" onclick="saveCfg()">' + I.check + 'Save routing</button><div id="cfgok"></div></div>'
+    + '<button class="btn pri" style="margin-top:14px" onclick="saveCfg()">' + I.check + 'Save routing</button><div id="cfgok"></div>'
+    + '<div class="testmail"><label>Check email is working</label>'
+    + '<p class="sub" style="margin:2px 0 7px">Sends a real test email so you can confirm delivery end to end.</p>'
+    + '<div class="testrow"><input id="c_test" type="email" placeholder="you@example.com" autocapitalize="none">'
+    + '<button class="btn" onclick="sendTest()">Send test</button></div><div id="testok"></div></div></div>'
     + '<div class="panel cfg"><h2><span class="pi">' + I.clock + '</span>Office hours</h2>'
     + '<p class="sub">Used by the dashboard clock, the chatbot and the footer. 24-hour, Pacific time.</p>'
     + '<div class="row"><div><label>Opens (Pacific)</label><input type="time" id="c_open" value="' + esc(c.HOURS_OPEN || '08:30') + '"></div>'
@@ -1134,6 +1140,17 @@ async function saveCfg(){
   try { await api('/config', {method:'PUT', body:JSON.stringify(body)});
     t.innerHTML = '<div class="ok">Saved. New leads use these settings immediately.</div>';
     loadHours();   // refresh the open/closed clock with any new hours or closures
+  } catch(e) { t.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+async function sendTest(){
+  const to = ($('c_test').value || '').trim();
+  const t = $('testok');
+  if (!to || to.indexOf('@') === -1) { t.innerHTML = '<div class="err">Enter a valid email address to send the test to.</div>'; return; }
+  t.innerHTML = '<div class="sub" style="margin-top:8px"><span class="spin"></span> Sending&hellip;</div>';
+  try {
+    const r = await api('/test-email', {method:'POST', body:JSON.stringify({to:to})});
+    if (r.ok) t.innerHTML = '<div class="ok">Sent to ' + esc(r.to) + '. Check the inbox (and the spam folder) &mdash; email is working.</div>';
+    else t.innerHTML = '<div class="err"><b>Not sent.</b> ' + esc(r.error || ('Resend HTTP ' + (r.status||''))) + '</div>';
   } catch(e) { t.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
 }
 

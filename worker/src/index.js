@@ -559,6 +559,29 @@ async function adminApi(req, env, path, url, who) {
     return json({ log: r.results || [] });
   }
 
+  /* Diagnostic: send a real test email and report exactly what Resend says. */
+  if (path === '/test-email' && req.method === 'POST') {
+    const b = await req.json().catch(function () { return {}; });
+    const to = clean(b.to, 160);
+    if (!to || to.indexOf('@') === -1) return json({ ok: false, error: 'Enter a valid recipient email address.' }, {}, 400);
+    if (!env.RESEND_API_KEY) return json({ ok: false, error: 'No RESEND_API_KEY is set on the Worker, so no email can be sent. Run: wrangler secret put RESEND_API_KEY' });
+    const cfg = await getConfig(env);
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: cfg.EMAIL_FROM, to: [to], subject: 'ProHealth admin — test email',
+          html: ackShell('It works.', 'This is a test from the ProHealth admin dashboard. If you are reading it, outbound email is configured correctly.',
+            [ ['Requested by', who], ['From', cfg.EMAIL_FROM] ], 'You can ignore this message.') }),
+      });
+      const txt = await r.text();
+      if (r.ok) { await audit(env, who, 'send test email', to, ''); return json({ ok: true, to: to }); }
+      // Surface Resend's real reason (e.g. domain not verified) to the admin.
+      let reason = txt; try { const j = JSON.parse(txt); reason = j.message || j.name || txt; } catch (e) {}
+      return json({ ok: false, status: r.status, error: String(reason).slice(0, 400) });
+    } catch (e) { return json({ ok: false, error: e.message }); }
+  }
+
   /* ---------------- backend access: admin accounts (super-admins only) ---------------- */
   if (path === '/admins' || path.indexOf('/admins/') === 0) {
     if (!isSuper(who, env)) return json({ error: 'Only the owner can manage admin access.' }, {}, 403);
