@@ -24,14 +24,19 @@ import {
   getAdmins, getAdmin, upsertAdmin, removeAdmin, setAdminPassword,
   createResetToken, readResetToken, deleteResetToken,
 } from './auth.js';
+import { attendanceRoute, attendanceCron } from './attendance.js';
 
 const ALLOWED_ORIGINS = [
   'https://prohealth.us',
   'https://www.prohealth.us',
   'https://prohealth.pages.dev',
   'https://prohealth-1oi.pages.dev',
+  // attendance PWA (Cloudflare Pages + custom domain)
+  'https://attend.prohealth.us',
+  'https://prohealth-attendance.pages.dev',
   'http://localhost:3000',
   'http://localhost:8000',
+  'http://localhost:5173',
 ];
 
 export default {
@@ -67,11 +72,23 @@ export default {
       if (req.method === 'POST' && p === '/applications') return await handleApplication(req, env, cors);
       if (req.method === 'POST' && p === '/data-requests') return await handleDataRequest(req, env, cors);
 
+      // Attendance app (NFC / QR clock-in). Auth is handled inside via Bearer token.
+      if (p.startsWith('/attend/')) return await attendanceRoute(req, env, url, cors);
+
       return json({ error: 'not found' }, cors, 404);
     } catch (e) {
       console.log('ERROR', p, e.stack || e.message);
       return json({ error: 'server error' }, cors, 500);
     }
+  },
+
+  // Nightly maintenance (see [triggers] in wrangler.toml): auto-close any
+  // attendance punch that was left open longer than a full shift.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      try { const n = await attendanceCron(env); if (n) console.log('attendance: auto-closed', n, 'punches'); }
+      catch (e) { console.log('attendance cron error', e.stack || e.message); }
+    })());
   },
 };
 
@@ -133,8 +150,9 @@ function corsHeaders(origin) {
   const ok = ALLOWED_ORIGINS.includes(origin);
   return {
     'Access-Control-Allow-Origin': ok ? origin : ALLOWED_ORIGINS[0],
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Vary': 'Origin',
   };
 }
 const json = (o, cors = {}, status = 200) =>

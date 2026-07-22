@@ -21,6 +21,14 @@ bucket_name = "prohealth-resumes"
 binding = "CONFIG"
 id = "deec0f19fc754d59a3e6829a4faa012f"
 
+# Attendance selfies are stored in the same R2 bucket as resumes, under the
+# att/selfies/ prefix (no extra bucket to provision). See src/attendance.js.
+
+# Nightly maintenance: auto-close attendance punches left open past a full
+# shift. 12:10 UTC ~= 04:10 America/Los_Angeles (well after any night shift).
+[triggers]
+crons = ["10 12 * * *"]
+
 [vars]
 # ---------- ADMIN LOGIN ----------
 ADMIN_USER = "admin"

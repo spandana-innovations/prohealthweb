@@ -3,7 +3,8 @@ import fs from 'fs';
 const auth = fs.readFileSync('./src/auth.js','utf8').replace(/^export /gm,'');
 const src = fs.readFileSync('./src/index.js','utf8')
   .replace("import { ADMIN_HTML } from './admin.js';", "const ADMIN_HTML='<html>DASHBOARD</html>';")
-  .replace(/import\s*\{[\s\S]*?\}\s*from\s*'\.\/auth\.js';/, "");
+  .replace(/import\s*\{[\s\S]*?\}\s*from\s*'\.\/auth\.js';/, "")
+  .replace(/import\s*\{[\s\S]*?\}\s*from\s*'\.\/attendance\.js';/, "const attendanceRoute=async()=>new Response('{}',{status:404});const attendanceCron=async()=>0;");
 fs.writeFileSync('/tmp/_w.mjs', auth + '\n' + src);
 const { default: worker } = await import('/tmp/_w.mjs');
 
