@@ -90,11 +90,24 @@ CREATE TABLE IF NOT EXISTS att_employees (
   pass_hash       TEXT,                   -- '' until they set a password (unused when Google login is on)
   picture         TEXT,                   -- Google profile photo URL
   assigned_office TEXT,                   -- location id they normally work at
+  shift_id        TEXT,                   -- att_shifts.id they normally work
   active          INTEGER DEFAULT 1,
   created_at      TEXT,
   created_by      TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_att_emp_email ON att_employees(email);
+
+-- Shift templates (start/end + weekdays). An employee's assigned shift sets the
+-- daily-hours goal shown on the phone, and drives the monthly report's expected
+-- days. (Per-day rota can layer on top of these later.)
+CREATE TABLE IF NOT EXISTS att_shifts (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  start      TEXT,     -- 'HH:MM' local
+  end        TEXT,     -- 'HH:MM' local
+  days       TEXT,     -- CSV of Mon,Tue,Wed,Thu,Fri,Sat,Sun
+  created_at TEXT
+);
 
 -- Every clock event. A shift is an 'in' followed by an 'out' for the same
 -- employee; hours is filled on the 'out' row.

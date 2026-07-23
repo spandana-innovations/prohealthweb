@@ -37,16 +37,29 @@ POST /attend/punch        nfc: JSON {loc,k,method:'nfc',deviceId}
                           qr:  multipart {loc,k,method:'qr',deviceId,selfie,[lat,lng,accuracy]}
 GET  /attend/setpw?token= | POST /attend/setpw   (employee set-password)
 
+POST /attend/google       {idToken}  -> verify Google ID token, sign in
+
 # superadmin (role must be "super")
 GET/POST            /attend/admin/locations           list / upsert
 DELETE POST         /attend/admin/locations/:id[/rotate]
-GET/POST            /attend/admin/employees           list / add (+ set-pw link)
+GET/POST            /attend/admin/employees           list / add (mode: invite|manual|magic)
 DELETE POST         /attend/admin/employees/:email[/reset]
+POST /attend/admin/employees/:email/assign  {assignedOffice?, shiftId?}
+GET/POST DELETE     /attend/admin/shifts[/:id]        shift templates
+GET/PUT             /attend/admin/holidays            {text} — separate from the site's
+GET  /attend/admin/report?month=YYYY-MM   monthly per-employee summary + totals
 GET  /attend/admin/overview     who's on the clock + flag count
 GET  /attend/admin/punches      punch list (filters: from,to,emp,loc)
 GET  /attend/admin/selfie?key=  serve a clock-in photo
 POST /attend/admin/punch        manual add / correction (the override)
 ```
+
+Google directory **import** is client-side (the admin consents to
+`admin.directory.user.readonly` in-app); the browser calls the Admin SDK directly and
+bulk-adds via `POST /attend/admin/employees` with `mode:"invite"`.
+
+New config: `GOOGLE_CLIENT_ID` (wrangler var). New tables: `att_shifts`, plus
+`att_employees.shift_id`/`picture`. Attendance holidays live in KV `att_holidays`.
 
 ## Punch responses the app handles
 

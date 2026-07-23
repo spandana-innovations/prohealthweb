@@ -178,6 +178,55 @@ export function fmtHours(h) {
   return Math.floor(total / 60) + 'h ' + String(total % 60).padStart(2, '0') + 'm';
 }
 
+// 'HH:MM' -> minutes since midnight (null if unparseable).
+export function hhmmToMin(s) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '').trim());
+  if (!m) return null;
+  const h = +m[1], mi = +m[2];
+  if (h > 23 || mi > 59) return null;
+  return h * 60 + mi;
+}
+// Length of a shift in hours (handles overnight shifts that cross midnight).
+export function shiftHours(shift) {
+  if (!shift) return null;
+  const a = hhmmToMin(shift.start), b = hhmmToMin(shift.end);
+  if (a == null || b == null) return null;
+  let mins = b - a; if (mins <= 0) mins += 24 * 60;   // overnight
+  return Math.round((mins / 60) * 100) / 100;
+}
+
+// Parse the attendance holidays text ("YYYY-MM-DD = Label" per line) — same
+// format as the website's closures, but a separate list for a separate purpose.
+export function parseHolidays(text) {
+  const out = [];
+  for (const line of String(text || '').split('\n')) {
+    const m = /^\s*(\d{4}-\d{2}-\d{2})\s*(?:=\s*(.*))?$/.exec(line);
+    if (m) out.push({ date: m[1], label: (m[2] || '').trim() });
+  }
+  return out;
+}
+
+// Roll up a month of punches into a per-employee summary. Pure + testable.
+// punches: rows with {email, kind, hours, created_at, flagged}. Returns rows
+// sorted by name/email.
+export function summarizeMonth(punches, nameByEmail) {
+  const by = {};
+  for (const p of (punches || [])) {
+    const e = p.email || '';
+    const r = by[e] || (by[e] = { email: e, name: (nameByEmail && nameByEmail[e]) || e, hours: 0, days: {}, sessions: 0, flagged: 0 });
+    const day = String(p.created_at || '').slice(0, 10);
+    if (p.kind === 'out') { r.hours += Number(p.hours) || 0; r.sessions += 1; if (day) r.days[day] = 1; }
+    if (p.kind === 'in' && day) r.days[day] = 1;
+    if (p.flagged) r.flagged += 1;
+  }
+  return Object.values(by).map((r) => ({
+    email: r.email, name: r.name,
+    hours: Math.round(r.hours * 100) / 100,
+    daysWorked: Object.keys(r.days).length,
+    sessions: r.sessions, flagged: r.flagged,
+  })).sort((a, b) => String(a.name).localeCompare(b.name));
+}
+
 /* Decide whether a QR punch is suspicious enough to demand a GPS geofence.
    Pure function so it is easy to unit-test. Returns an array of reasons
    (empty => not fishy). */
@@ -204,6 +253,15 @@ async function listLocations(env) {
 async function getEmployeeByEmail(env, email) {
   const r = await env.DB.prepare('SELECT * FROM att_employees WHERE email = ?').bind(lc(email)).all();
   return (r.results || [])[0] || null;
+}
+async function getShift(env, id) {
+  if (!id) return null;
+  const r = await env.DB.prepare('SELECT * FROM att_shifts WHERE id = ?').bind(id).all();
+  return (r.results || [])[0] || null;
+}
+async function listShifts(env) {
+  const r = await env.DB.prepare('SELECT * FROM att_shifts ORDER BY start, name').all();
+  return r.results || [];
 }
 async function lastPunch(env, employeeId) {
   const r = await env.DB.prepare('SELECT * FROM att_punches WHERE employee_id = ? ORDER BY created_at DESC LIMIT 1').bind(employeeId).all();
@@ -368,12 +426,17 @@ async function meFor(env, email, role, emp) {
       open = { punchId: lp.id, locId: lp.loc_id, locName: (loc && loc.name) || lp.loc_name || lp.loc_id, since: lp.created_at };
     }
   }
+  let shift = null, goal = ATT.GOAL_HOURS;
+  if (emp && emp.shift_id) {
+    const s = await getShift(env, emp.shift_id);
+    if (s) { shift = { id: s.id, name: s.name, start: s.start, end: s.end, days: s.days }; const sh = shiftHours(s); if (sh) goal = sh; }
+  }
   return {
     role, email, name: (emp && emp.name) || email,
     assignedOffice: emp ? emp.assigned_office : null, open, offices,
     picture: emp ? (emp.picture || null) : null,
     todayHours: emp ? await todayHours(env, emp.id) : 0,
-    goalHours: ATT.GOAL_HOURS,
+    goalHours: goal, shift,
   };
 }
 
@@ -560,12 +623,11 @@ async function adminRoute(req, env, url, cors) {
   /* ---- employees ---- */
   if (sub === '/employees') {
     if (req.method === 'GET') {
-      const r = await env.DB.prepare('SELECT id, email, name, assigned_office, active, created_at FROM att_employees ORDER BY name').all();
-      const list = (r.results || []).map((e) => ({ ...e, hasPassword: undefined }));
+      const r = await env.DB.prepare('SELECT id, email, name, assigned_office, shift_id, picture, active, created_at FROM att_employees ORDER BY name').all();
       // hasPassword needs the hash column; fetch cheaply
       const h = await env.DB.prepare('SELECT id, (pass_hash IS NOT NULL AND pass_hash != "") AS hp FROM att_employees').all();
       const hp = {}; for (const x of (h.results || [])) hp[x.id] = !!x.hp;
-      return json({ employees: list.map((e) => ({ id: e.id, email: e.email, name: e.name, assignedOffice: e.assigned_office, active: !!e.active, hasPassword: !!hp[e.id], createdAt: e.created_at })) }, cors);
+      return json({ employees: (r.results || []).map((e) => ({ id: e.id, email: e.email, name: e.name, assignedOffice: e.assigned_office, shiftId: e.shift_id || '', picture: e.picture || '', active: !!e.active, hasPassword: !!hp[e.id], createdAt: e.created_at })) }, cors);
     }
     if (req.method === 'POST') {
       let b = {}; try { b = await req.json(); } catch (e) { return json({ error: 'bad request' }, cors, 400); }
@@ -617,6 +679,83 @@ async function adminRoute(req, env, url, cors) {
     const sent = await emailSetPw(env, email, url.origin, token);
     await audit(env, who.sub, 'employee reset link', email, '');
     return json({ ok: true, sent }, cors);
+  }
+
+  /* ---- assign an employee to an office and/or shift ---- */
+  const empAssign = sub.match(/^\/employees\/([^/]+)\/assign$/);
+  if (empAssign && req.method === 'POST') {
+    const email = lc(decodeURIComponent(empAssign[1]));
+    const emp = await getEmployeeByEmail(env, email);
+    if (!emp) return json({ error: 'not found' }, cors, 404);
+    let b = {}; try { b = await req.json(); } catch (e) { return json({ error: 'bad request' }, cors, 400); }
+    const office = b.assignedOffice !== undefined ? clean(b.assignedOffice, 40) : emp.assigned_office;
+    const shiftId = b.shiftId !== undefined ? clean(b.shiftId, 40) : emp.shift_id;
+    await env.DB.prepare('UPDATE att_employees SET assigned_office = ?, shift_id = ? WHERE id = ?').bind(office, shiftId, emp.id).run();
+    await audit(env, who.sub, 'assign employee', email, 'office=' + office + ' shift=' + shiftId);
+    return json({ ok: true }, cors);
+  }
+
+  /* ---- shift templates ---- */
+  if (sub === '/shifts') {
+    if (req.method === 'GET') return json({ shifts: await listShifts(env) }, cors);
+    if (req.method === 'POST') {
+      let b = {}; try { b = await req.json(); } catch (e) { return json({ error: 'bad request' }, cors, 400); }
+      const name = clean(b.name, 60);
+      if (!name) return json({ error: 'A shift name is required.' }, cors, 400);
+      if (hhmmToMin(b.start) == null || hhmmToMin(b.end) == null) return json({ error: 'Start and end must be HH:MM.' }, cors, 400);
+      const days = (Array.isArray(b.days) ? b.days : String(b.days || '').split(',')).map((d) => clean(d, 3)).filter(Boolean).join(',');
+      let id = clean(b.id, 40);
+      if (id && await getShift(env, id)) {
+        await env.DB.prepare('UPDATE att_shifts SET name=?, start=?, end=?, days=? WHERE id=?').bind(name, clean(b.start, 5), clean(b.end, 5), days, id).run();
+        await audit(env, who.sub, 'update shift', id, name);
+      } else {
+        id = uuid();
+        await env.DB.prepare("INSERT INTO att_shifts (id, name, start, end, days, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+          .bind(id, name, clean(b.start, 5), clean(b.end, 5), days).run();
+        await audit(env, who.sub, 'create shift', id, name);
+      }
+      return json({ ok: true, shift: await getShift(env, id) }, cors);
+    }
+  }
+  const shiftDel = sub.match(/^\/shifts\/([\w-]+)$/);
+  if (shiftDel && req.method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM att_shifts WHERE id = ?').bind(shiftDel[1]).run();
+    await env.DB.prepare('UPDATE att_employees SET shift_id = ? WHERE shift_id = ?').bind('', shiftDel[1]).run();
+    await audit(env, who.sub, 'delete shift', shiftDel[1], '');
+    return json({ ok: true }, cors);
+  }
+
+  /* ---- attendance holidays (separate from the website's closures) ---- */
+  if (sub === '/holidays') {
+    if (req.method === 'GET') {
+      const text = (await env.CONFIG.get('att_holidays')) || '';
+      return json({ text, holidays: parseHolidays(text) }, cors);
+    }
+    if (req.method === 'PUT') {
+      let b = {}; try { b = await req.json(); } catch (e) { return json({ error: 'bad request' }, cors, 400); }
+      await env.CONFIG.put('att_holidays', clean(b.text, 8000));
+      await audit(env, who.sub, 'update attendance holidays', '', '');
+      return json({ ok: true }, cors);
+    }
+  }
+
+  /* ---- monthly summary report ---- */
+  if (sub === '/report' && req.method === 'GET') {
+    const month = clean(url.searchParams.get('month'), 7);      // YYYY-MM
+    if (!/^\d{4}-\d{2}$/.test(month)) return json({ error: 'month must be YYYY-MM' }, cors, 400);
+    const start = month + '-01 00:00:00';
+    const end = month + '-31 23:59:59';
+    const [pr, er] = await Promise.all([
+      env.DB.prepare('SELECT email, kind, hours, flagged, created_at FROM att_punches WHERE created_at >= ? AND created_at <= ? ORDER BY created_at').bind(start, end).all(),
+      env.DB.prepare('SELECT email, name FROM att_employees').all(),
+    ]);
+    const nameByEmail = {};
+    for (const e of (er.results || [])) nameByEmail[e.email] = e.name;
+    const rows = summarizeMonth(pr.results || [], nameByEmail);
+    const totals = rows.reduce((t, r) => ({ hours: t.hours + r.hours, days: t.days + r.daysWorked, flagged: t.flagged + r.flagged }), { hours: 0, days: 0, flagged: 0 });
+    totals.hours = Math.round(totals.hours * 100) / 100;
+    const holidays = parseHolidays((await env.CONFIG.get('att_holidays')) || '').filter((h) => h.date.slice(0, 7) === month);
+    return json({ month, rows, totals, holidays }, cors);
   }
 
   /* ---- overview: who is on the clock right now ---- */

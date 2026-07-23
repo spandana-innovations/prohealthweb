@@ -26,7 +26,7 @@ function splitTop(s) {
 const stripq = (v) => v.trim().replace(/^'/, '').replace(/'$/, '');
 
 function makeDB() {
-  const tables = { att_locations: [], att_employees: [], att_punches: [], audit_log: [] };
+  const tables = { att_locations: [], att_employees: [], att_punches: [], att_shifts: [], audit_log: [] };
   let seq = 0;
   const cmp = (a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : a.__seq - b.__seq);
 
@@ -71,7 +71,10 @@ function makeDB() {
     if (/FROM att_locations ORDER BY name/i.test(s)) return { results: [...tables.att_locations].sort((a, c) => String(a.name).localeCompare(c.name)) };
     if (/FROM att_employees WHERE email = \?/i.test(s)) return { results: tables.att_employees.filter((r) => r.email === b[0]) };
     if (/pass_hash IS NOT NULL/i.test(s)) return { results: tables.att_employees.map((e) => ({ id: e.id, hp: e.pass_hash ? 1 : 0 })) };
+    if (/FROM att_shifts WHERE id = \?/i.test(s)) return { results: tables.att_shifts.filter((r) => r.id === b[0]) };
+    if (/FROM att_shifts/i.test(s)) return { results: [...tables.att_shifts] };
     if (/SELECT id, email, name, assigned_office/i.test(s)) return { results: [...tables.att_employees] };
+    if (/FROM att_employees/i.test(s)) return { results: [...tables.att_employees] };
     if (/FROM att_punches WHERE employee_id = \? AND device_id = \?/i.test(s)) return { results: tables.att_punches.filter((p) => p.employee_id === b[0] && p.device_id === b[1]).slice(0, 1) };
     if (/FROM att_punches WHERE employee_id = \? ORDER BY created_at DESC LIMIT 1/i.test(s)) {
       const list = tables.att_punches.filter((p) => p.employee_id === b[0]).sort(cmp);
@@ -287,6 +290,46 @@ await t('auto-close closes a punch left open too long', async () => {
   const n = await M.attendanceCron(env2);
   const closed = env2.DB._tables.att_punches.find((p) => p.flagged === 'auto-closed');
   return n === 1 && closed && closed.kind === 'out';
+});
+
+/* ---------------- shifts, assignment, holidays, report ---------------- */
+await t('hhmmToMin parses / rejects', () => M.hhmmToMin('09:30') === 570 && M.hhmmToMin('24:00') === null);
+await t('shiftHours normal', () => M.shiftHours({ start: '07:00', end: '15:30' }) === 8.5);
+await t('shiftHours overnight', () => M.shiftHours({ start: '22:00', end: '06:00' }) === 8);
+await t('parseHolidays keeps valid lines', () => {
+  const h = M.parseHolidays('2026-12-25 = Christmas\nrubbish\n2026-01-01');
+  return h.length === 2 && h[0].label === 'Christmas' && h[1].date === '2026-01-01';
+});
+await t('summarizeMonth rolls up per employee', () => {
+  const rows = M.summarizeMonth([
+    { email: 'a@x', kind: 'in', created_at: '2026-07-01 09:00:00' },
+    { email: 'a@x', kind: 'out', hours: 8, created_at: '2026-07-01 17:00:00' },
+    { email: 'a@x', kind: 'out', hours: 7.5, created_at: '2026-07-02 16:30:00', flagged: 'long-shift' },
+  ], { 'a@x': 'Ann' });
+  return rows.length === 1 && rows[0].hours === 15.5 && rows[0].daysWorked === 2 && rows[0].flagged === 1 && rows[0].name === 'Ann';
+});
+
+let shiftId = '';
+await t('superadmin creates a shift', async () => {
+  const r = await route(env, '/attend/admin/shifts', { method: 'POST', headers: { ...jbody(), ...bearer(superToken) }, body: JSON.stringify({ name: 'Day', start: '07:00', end: '15:30', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] }) });
+  const d = await r.json(); shiftId = d.shift && d.shift.id; return r.status === 200 && !!shiftId;
+});
+await t('assign employee to office + shift', async () => {
+  const r = await route(env, '/attend/admin/employees/' + encodeURIComponent('nurse@prohealth.us') + '/assign', { method: 'POST', headers: { ...jbody(), ...bearer(superToken) }, body: JSON.stringify({ assignedOffice: 'SAC', shiftId: shiftId }) });
+  return r.status === 200;
+});
+await t('employee /me goal reflects the shift length', async () => {
+  const r = await route(env, '/attend/me', { method: 'GET', headers: bearer(empToken) });
+  const d = await r.json(); return d.goalHours === 8.5 && d.shift && d.shift.name === 'Day';
+});
+await t('holidays PUT then GET round-trips (separate list)', async () => {
+  await route(env, '/attend/admin/holidays', { method: 'PUT', headers: { ...jbody(), ...bearer(superToken) }, body: JSON.stringify({ text: '2026-07-04 = Independence Day' }) });
+  const r = await route(env, '/attend/admin/holidays', { method: 'GET', headers: bearer(superToken) });
+  const d = await r.json(); return d.holidays.length === 1 && d.holidays[0].label === 'Independence Day';
+});
+await t('monthly report returns rows + totals', async () => {
+  const r = await route(env, '/attend/admin/report?month=2026-07', { method: 'GET', headers: bearer(superToken) });
+  const d = await r.json(); return r.status === 200 && d.month === '2026-07' && Array.isArray(d.rows) && d.totals;
 });
 
 /* ---------------- output ---------------- */
