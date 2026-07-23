@@ -63,6 +63,14 @@ EMAIL_PRIVACY = "privacy@prohealth.us"
 # allow anyone Access itself lets through.
 ADMIN_EMAILS  = ""
 
+# ---------- ATTENDANCE: GOOGLE SIGN-IN ----------
+# OAuth 2.0 Web client ID from Google Cloud Console (APIs & Services >
+# Credentials). Authorized JS origin must include the attendance app origin
+# (e.g. https://attend.prohealth.us). Restrict the OAuth consent screen to the
+# prohealth.us Workspace. The SAME value goes in the PWA's config.js.
+# Employees sign in with Google; leave blank to fall back to email + password.
+GOOGLE_CLIENT_ID = ""
+
 # NEVER set this to "1" in production: it disables admin authentication.
 # DEV_BYPASS = "1"
 

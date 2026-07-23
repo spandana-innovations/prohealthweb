@@ -162,6 +162,21 @@ await t('fishy: rapid re-tap -> fishy', () => {
   return M.fishyReasons(now, { knownDevice: true, assignedOffice: 'SAC', locId: 'SAC', secondsSinceLast: 20 }).some((x) => x.includes('too soon'));
 });
 
+/* ---------------- Google sign-in ---------------- */
+await t('googleClaimsValid: good token passes', () =>
+  M.googleClaimsValid({ iss: 'https://accounts.google.com', aud: 'CID', exp: Math.floor(Date.now() / 1000) + 600, email: 'a@prohealth.us', email_verified: true }, 'CID', Date.now()) === true);
+await t('googleClaimsValid: wrong audience fails', () =>
+  M.googleClaimsValid({ iss: 'https://accounts.google.com', aud: 'OTHER', exp: Math.floor(Date.now() / 1000) + 600, email: 'a@prohealth.us', email_verified: true }, 'CID', Date.now()) === false);
+await t('googleClaimsValid: expired fails', () =>
+  M.googleClaimsValid({ iss: 'accounts.google.com', aud: 'CID', exp: Math.floor(Date.now() / 1000) - 10, email: 'a@prohealth.us', email_verified: true }, 'CID', Date.now()) === false);
+await t('googleClaimsValid: unverified email fails', () =>
+  M.googleClaimsValid({ iss: 'accounts.google.com', aud: 'CID', exp: Math.floor(Date.now() / 1000) + 600, email: 'a@prohealth.us', email_verified: false }, 'CID', Date.now()) === false);
+await t('POST /attend/google is 501 when unconfigured', async () => {
+  const env0 = makeEnv();
+  const r = await route(env0, '/attend/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: 'x.y.z' }) });
+  return r.status === 501;
+});
+
 /* ---------------- integration: superadmin provisioning ---------------- */
 // Seed a superadmin in the KV admin roster.
 const env = makeEnv();
@@ -205,7 +220,7 @@ let empToken = '';
 await t('employee can sign in', async () => {
   const r = await route(env, '/attend/login', { method: 'POST', headers: jbody(), body: JSON.stringify({ email: 'nurse@prohealth.us', password: 'nursepass123' }) });
   const d = await r.json(); empToken = d.token;
-  return r.status === 200 && d.role === 'employee' && d.assignedOffice === 'SAC';
+  return r.status === 200 && d.role === 'employee' && d.assignedOffice === 'SAC' && d.goalHours === 8 && typeof d.todayHours === 'number';
 });
 await t('employee token cannot access admin', async () => {
   const r = await route(env, '/attend/admin/locations', { method: 'GET', headers: bearer(empToken) });

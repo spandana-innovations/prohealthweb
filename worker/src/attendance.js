@@ -48,6 +48,7 @@ export const ATT = {
   SELFIE_MAX_BYTES: 3 * 1024 * 1024,
   SESSION_HOURS: 12,
   SELFIE_PREFIX: 'att/selfies/',
+  GOAL_HOURS: 8,               // the ring on the employee screen fills toward this
 };
 
 /* ---------------- tiny crypto (self-contained; mirrors auth.js) ---------------- */
@@ -93,6 +94,52 @@ async function readToken(env, token) {
     if (o.aud !== 'att' || !o.exp || o.exp < Date.now()) return null;
     return { sub: o.sub, role: o.r };
   } catch (e) { return null; }
+}
+
+/* ---------------- Google Sign-In (ID token verification) ----------------
+   The employee app uses "Sign in with Google" (Google Identity Services). The
+   browser hands us a signed ID token (a JWT); we verify it here against
+   Google's public keys, then check it's a @prohealth.us account. No password. */
+
+// Google's signing keys, cached in KV for an hour.
+async function googleKeys(env) {
+  try { const c = await env.CONFIG.get('google_jwks'); if (c) return JSON.parse(c); } catch (e) {}
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+  const j = await r.json();
+  try { await env.CONFIG.put('google_jwks', JSON.stringify(j), { expirationTtl: 3600 }); } catch (e) {}
+  return j;
+}
+
+// Pure claim checks — split out so they're unit-testable without a real token.
+export function googleClaimsValid(p, clientId, nowMs) {
+  if (!p || !clientId) return false;
+  if (p.iss !== 'accounts.google.com' && p.iss !== 'https://accounts.google.com') return false;
+  if (p.aud !== clientId) return false;
+  if (!p.exp || p.exp * 1000 < nowMs) return false;
+  if (!p.email || p.email_verified === false) return false;
+  return true;
+}
+
+async function verifyGoogleIdToken(env, idToken) {
+  if (!env.GOOGLE_CLIENT_ID) return null;
+  const parts = String(idToken || '').split('.');
+  if (parts.length !== 3) return null;
+  let header, payload;
+  try {
+    header = JSON.parse(new TextDecoder().decode(unb64url(parts[0])));
+    payload = JSON.parse(new TextDecoder().decode(unb64url(parts[1])));
+  } catch (e) { return null; }
+  if (header.alg !== 'RS256') return null;
+  const keys = await googleKeys(env);
+  const jwk = ((keys && keys.keys) || []).find((k) => k.kid === header.kid);
+  if (!jwk) return null;
+  try {
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    const ok = await crypto.subtle.verify({ name: 'RSASSA-PKCS1-v1_5' }, key, unb64url(parts[2]), enc.encode(parts[0] + '.' + parts[1]));
+    if (!ok) return null;
+  } catch (e) { return null; }
+  if (!googleClaimsValid(payload, env.GOOGLE_CLIENT_ID, Date.now())) return null;
+  return payload;
 }
 
 /* ---------------- helpers ---------------- */
@@ -213,6 +260,7 @@ async function requireEmployee(req, env, cors, opts = {}) {
 export async function attendanceRoute(req, env, url, cors) {
   const p = url.pathname;
   if (p === '/attend/login' && req.method === 'POST') return handleLogin(req, env, cors);
+  if (p === '/attend/google' && req.method === 'POST') return handleGoogle(req, env, cors);
   if (p === '/attend/logout') return json({ ok: true }, cors);
   if (p === '/attend/setpw') return handleSetPw(req, env, cors);
   if (p === '/attend/me' && req.method === 'GET') return handleMe(req, env, cors);
@@ -248,6 +296,60 @@ async function handleLogin(req, env, cors) {
   return json({ ok: true, token, ...me }, cors);
 }
 
+/* ---------------- POST /attend/google ----------------
+   Verify a Google ID token, then sign the person in. Superadmins pass straight
+   through (identified by email); everyone else with a @prohealth.us Google
+   account is an employee — auto-provisioned on first sign-in, unless an admin
+   has deactivated them. We capture their name + Google photo each time. */
+async function handleGoogle(req, env, cors) {
+  const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
+  if (await tooMany(env, ip, 'attlogin', 20, 900)) return json({ error: 'Too many attempts. Wait a few minutes.' }, cors, 429);
+  if (!env.GOOGLE_CLIENT_ID) return json({ error: 'Google sign-in is not configured yet.' }, cors, 501);
+  let b = {}; try { b = await req.json(); } catch (e) { return json({ error: 'bad request' }, cors, 400); }
+  const payload = await verifyGoogleIdToken(env, b.idToken);
+  if (!payload) return json({ error: 'Google sign-in failed. Please try again.' }, cors, 401);
+
+  const email = lc(payload.email);
+  if (!/^[^@\s]+@prohealth\.us$/.test(email) && payload.hd !== 'prohealth.us') {
+    return json({ error: 'Please use your @prohealth.us Google account.' }, cors, 403);
+  }
+  const name = clean(payload.name, 80) || email.split('@')[0];
+  const picture = clean(payload.picture, 400);
+
+  let role;
+  if (isSuper(email, env)) {
+    role = 'super';
+  } else {
+    const emp = await getEmployeeByEmail(env, email);
+    if (emp && !emp.active) return json({ error: 'This account is inactive. Please contact your office.' }, cors, 403);
+    if (!emp) {
+      await env.DB.prepare(
+        "INSERT INTO att_employees (id, email, name, pass_hash, picture, assigned_office, active, created_at, created_by) " +
+        "VALUES (?, ?, ?, '', ?, '', 1, datetime('now'), 'google')"
+      ).bind(uuid(), email, name, picture).run();
+    } else {
+      await env.DB.prepare('UPDATE att_employees SET name = ?, picture = ? WHERE id = ?').bind(name, picture, emp.id).run();
+    }
+    role = 'employee';
+  }
+  const token = await makeToken(env, email, role);
+  await audit(env, email, 'attendance sign-in (google)', role, '');
+  return json({ ok: true, token, ...(await meFor(env, email, role)) }, cors);
+}
+
+// Completed hours clocked today (office timezone), not counting an open shift.
+async function todayHours(env, employeeId) {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: ATT.TZ, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(now);
+  const g = (t) => parseInt((parts.find((x) => x.type === t) || {}).value || '0', 10);
+  let h = g('hour'); if (h === 24) h = 0;
+  const secsSinceLocalMidnight = h * 3600 + g('minute') * 60 + g('second');
+  const startIso = new Date(now.getTime() - secsSinceLocalMidnight * 1000).toISOString().replace('T', ' ').slice(0, 19);
+  const r = await env.DB.prepare("SELECT hours FROM att_punches WHERE employee_id = ? AND kind = 'out' AND created_at >= ?").bind(employeeId, startIso).all();
+  let sum = 0; for (const row of (r.results || [])) sum += Number(row.hours) || 0;
+  return Math.round(sum * 100) / 100;
+}
+
 /* ---------------- GET /attend/me ---------------- */
 async function handleMe(req, env, cors) {
   const who = await requireEmployee(req, env, cors);
@@ -256,7 +358,7 @@ async function handleMe(req, env, cors) {
 }
 async function meFor(env, email, role, emp) {
   const offices = (await listLocations(env)).filter((l) => l.active).map((l) => ({ id: l.id, name: l.name }));
-  if (role === 'super') return { role, email, name: 'Superadmin', assignedOffice: null, open: null, offices };
+  if (role === 'super') return { role, email, name: 'Superadmin', assignedOffice: null, open: null, offices, picture: null, todayHours: 0, goalHours: ATT.GOAL_HOURS };
   emp = emp || await getEmployeeByEmail(env, email);
   let open = null;
   if (emp) {
@@ -269,6 +371,9 @@ async function meFor(env, email, role, emp) {
   return {
     role, email, name: (emp && emp.name) || email,
     assignedOffice: emp ? emp.assigned_office : null, open, offices,
+    picture: emp ? (emp.picture || null) : null,
+    todayHours: emp ? await todayHours(env, emp.id) : 0,
+    goalHours: ATT.GOAL_HOURS,
   };
 }
 
@@ -468,13 +573,17 @@ async function adminRoute(req, env, url, cors) {
       if (!/^[^@\s]+@prohealth\.us$/i.test(email)) return json({ error: 'Only @prohealth.us emails can be added.' }, cors, 400);
       const name = clean(b.name, 80) || email.split('@')[0];
       const office = clean(b.assignedOffice, 40);
-      const mode = b.mode === 'manual' ? 'manual' : 'magic';
+      // 'manual' = set a password now; 'invite' = just create the record (they
+      // sign in with Google); 'magic' = email a set-password link. With Google
+      // login on, 'invite' is the norm — you only pre-add to assign an office.
+      const mode = ['manual', 'invite', 'magic'].indexOf(b.mode) !== -1 ? b.mode : 'magic';
+      const activeOnCreate = (mode === 'manual' || mode === 'invite') ? 1 : 0;
       let emp = await getEmployeeByEmail(env, email);
       if (!emp) {
         const id = uuid();
         await env.DB.prepare('INSERT INTO att_employees (id, email, name, pass_hash, assigned_office, active, created_at, created_by) ' +
           "VALUES (?, ?, ?, '', ?, ?, datetime('now'), ?)")
-          .bind(id, email, name, office, mode === 'manual' ? 1 : 0, who.sub).run();
+          .bind(id, email, name, office, activeOnCreate, who.sub).run();
         emp = await getEmployeeByEmail(env, email);
       } else {
         await env.DB.prepare('UPDATE att_employees SET name=?, assigned_office=? WHERE id=?').bind(name, office, emp.id).run();
@@ -484,10 +593,10 @@ async function adminRoute(req, env, url, cors) {
         const pass = String(b.password || '');
         if (pass.length < 10) return json({ error: 'Password must be at least 10 characters.' }, cors, 400);
         await env.DB.prepare('UPDATE att_employees SET pass_hash=?, active=1 WHERE id=?').bind(await hashPassword(pass), emp.id).run();
-      } else {
+      } else if (mode === 'magic') {
         const token = await createEmpToken(env, email);
         sent = await emailSetPw(env, email, url.origin, token);
-      }
+      }   // 'invite': nothing more to do — Google login provisions the rest
       await audit(env, who.sub, 'add/update employee', email, mode);
       return json({ ok: true, email, sent }, cors);
     }

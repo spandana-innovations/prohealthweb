@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS att_employees (
   id              TEXT PRIMARY KEY,
   email           TEXT UNIQUE NOT NULL,   -- @prohealth.us
   name            TEXT,
-  pass_hash       TEXT,                   -- '' until they set a password
+  pass_hash       TEXT,                   -- '' until they set a password (unused when Google login is on)
+  picture         TEXT,                   -- Google profile photo URL
   assigned_office TEXT,                   -- location id they normally work at
   active          INTEGER DEFAULT 1,
   created_at      TEXT,
